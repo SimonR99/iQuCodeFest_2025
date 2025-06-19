@@ -1,16 +1,22 @@
 import pygame
 import sys
+import os
 from typing import Optional, Tuple
+from .map_renderer import MapRenderer
 
 class GameWindow:
-    def __init__(self, width: int = 1200, height: int = 800):
+    def __init__(self, width: int = 1400, height: int = 900):
         self.width = width
         self.height = height
-        self.min_width = 800
-        self.min_height = 600
+        self.min_width = 1000
+        self.min_height = 700
         self.screen: Optional[pygame.Surface] = None
         self.clock = pygame.time.Clock()
         self.running = False
+        
+        # Initialize map renderer
+        config_path = os.path.join(os.path.dirname(__file__), '../../..', 'config', 'university_map.json')
+        self.map_renderer = MapRenderer(config_path)
         
         # Colors
         self.BACKGROUND_COLOR = (30, 30, 40)
@@ -24,10 +30,10 @@ class GameWindow:
         self.update_layout()
     
     def update_layout(self) -> None:
-        # Calculate layout based on current window size
-        info_panel_width = min(370, self.width // 3)
+        # Calculate layout based on current window size with larger panels
+        info_panel_width = min(450, self.width // 3)
         map_width = self.width - info_panel_width - 30
-        card_height = min(170, self.height // 5)
+        card_height = min(220, self.height // 4)
         map_height = self.height - card_height - 30
         
         self.map_rect = pygame.Rect(10, 10, map_width, map_height)
@@ -60,13 +66,8 @@ class GameWindow:
                 self.update_layout()
     
     def draw_map_area(self) -> None:
-        pygame.draw.rect(self.screen, self.MAP_COLOR, self.map_rect)
-        pygame.draw.rect(self.screen, self.BORDER_COLOR, self.map_rect, 2)
-        
-        # Draw placeholder text
-        text = self.font.render("Map Area - Cities and Routes", True, self.TEXT_COLOR)
-        text_rect = text.get_rect(center=(self.map_rect.centerx, self.map_rect.centery))
-        self.screen.blit(text, text_rect)
+        # Use map renderer to draw the university map
+        self.map_renderer.draw_map(self.screen, self.map_rect)
     
     def draw_card_area(self) -> None:
         pygame.draw.rect(self.screen, self.CARD_AREA_COLOR, self.card_area_rect)
@@ -92,8 +93,12 @@ class GameWindow:
             "Turn: 1",
             "",
             "Mission:",
-            "Start: Berlin |0⟩",
-            "Target: Rome |1⟩",
+            "Start: MIT |0⟩",
+            "Target: Oxford |1⟩",
+            "",
+            "Gate Cards in Hand:",
+            "H: 2, X: 1, Y: 0",
+            "Z: 1, I: 1, CNOT: 0",
             "",
             "Actions:",
             "1. Draw Cards",

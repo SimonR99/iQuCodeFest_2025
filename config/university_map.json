@@ -1,0 +1,154 @@
+{
+  "universities": {
+    "MIT": {
+      "name": "Massachusetts Institute of Technology",
+      "position": [150, 100],
+      "color": [200, 100, 100]
+    },
+    "Stanford": {
+      "name": "Stanford University",
+      "position": [80, 200],
+      "color": [150, 200, 100]
+    },
+    "Harvard": {
+      "name": "Harvard University", 
+      "position": [180, 120],
+      "color": [100, 150, 200]
+    },
+    "Caltech": {
+      "name": "California Institute of Technology",
+      "position": [60, 180],
+      "color": [200, 150, 100]
+    },
+    "Princeton": {
+      "name": "Princeton University",
+      "position": [200, 160],
+      "color": [150, 100, 200]
+    },
+    "Chicago": {
+      "name": "University of Chicago",
+      "position": [120, 250],
+      "color": [100, 200, 150]
+    },
+    "Berkeley": {
+      "name": "UC Berkeley",
+      "position": [40, 220],
+      "color": [200, 200, 100]
+    },
+    "Oxford": {
+      "name": "University of Oxford",
+      "position": [300, 80],
+      "color": [100, 100, 200]
+    },
+    "Cambridge": {
+      "name": "University of Cambridge",
+      "position": [320, 100],
+      "color": [200, 100, 200]
+    },
+    "ETH": {
+      "name": "ETH Zurich",
+      "position": [280, 140],
+      "color": [100, 200, 200]
+    }
+  },
+  "routes": [
+    {
+      "from": "MIT",
+      "to": "Harvard",
+      "gate": "H",
+      "length": 1,
+      "claimed_by": null
+    },
+    {
+      "from": "MIT",
+      "to": "Stanford",
+      "gate": "X",
+      "length": 2,
+      "claimed_by": null
+    },
+    {
+      "from": "Stanford",
+      "to": "Caltech",
+      "gate": "Y",
+      "length": 1,
+      "claimed_by": null
+    },
+    {
+      "from": "Stanford",
+      "to": "Berkeley",
+      "gate": "Z",
+      "length": 1,
+      "claimed_by": null
+    },
+    {
+      "from": "Harvard",
+      "to": "Princeton",
+      "gate": "I",
+      "length": 1,
+      "claimed_by": null
+    },
+    {
+      "from": "Princeton",
+      "to": "Chicago",
+      "gate": "CNOT",
+      "length": 3,
+      "claimed_by": null
+    },
+    {
+      "from": "Caltech",
+      "to": "Berkeley",
+      "gate": "H",
+      "length": 2,
+      "claimed_by": null
+    },
+    {
+      "from": "Chicago",
+      "to": "Berkeley",
+      "gate": "X",
+      "length": 2,
+      "claimed_by": null
+    },
+    {
+      "from": "Oxford",
+      "to": "Cambridge",
+      "gate": "Z",
+      "length": 1,
+      "claimed_by": null
+    },
+    {
+      "from": "Cambridge",
+      "to": "ETH",
+      "gate": "Y",
+      "length": 2,
+      "claimed_by": null
+    },
+    {
+      "from": "MIT",
+      "to": "Oxford",
+      "gate": "CNOT",
+      "length": 4,
+      "claimed_by": null
+    },
+    {
+      "from": "Princeton",
+      "to": "ETH",
+      "gate": "H",
+      "length": 3,
+      "claimed_by": null
+    }
+  ],
+  "map_settings": {
+    "background_color": [30, 40, 50],
+    "university_radius": 15,
+    "route_width": 3,
+    "font_size": 12,
+    "gate_colors": {
+      "I": [255, 255, 255],
+      "X": [255, 100, 100],
+      "Y": [100, 255, 100],
+      "Z": [100, 100, 255],
+      "H": [255, 255, 100],
+      "CNOT": [255, 100, 255]
+    }
+  }
+}

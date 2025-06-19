@@ -28,7 +28,7 @@ The game window will display:
 ## Development Todo List
 
 ### High Priority
-- [ ] Implement city map with quantum gate routes
+- [ ] Implement university map with quantum gate routes
 - [ ] Create gate card system (I, X, Y, Z, H, CNOT)
 - [ ] Add player hand management
 - [ ] Implement route claiming mechanics

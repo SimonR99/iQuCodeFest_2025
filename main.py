@@ -1,4 +1,4 @@
-from src.quantum_ticket_to_ride.ui.game_window import GameWindow
+from src.ket_to_ride.ui.game_window import GameWindow
 
 def main():
     print("Starting Ket-to-Ride...")
