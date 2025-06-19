@@ -1,0 +1,21 @@
+[project]
+name = "ket-to-ride"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pygame>=2.5.0",
+    "numpy==1.26.4",
+    "qiskit==1.4.2",
+    "qiskit-aer==0.16.1",
+    "qiskit-ibm-runtime==0.30.0",
+    "scipy==1.15.2",
+    "networkx==3.4.2",
+    "matplotlib==3.9.2",
+    "jupyter==1.1.1",
+    "pylatexenc==2.10",
+    "plotly==6.0.1",
+    "imageio==2.37.0",
+    "tqdm==4.67.1"
+]
