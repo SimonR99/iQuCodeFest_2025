@@ -6,6 +6,8 @@ class GameWindow:
     def __init__(self, width: int = 1200, height: int = 800):
         self.width = width
         self.height = height
+        self.min_width = 800
+        self.min_height = 600
         self.screen: Optional[pygame.Surface] = None
         self.clock = pygame.time.Clock()
         self.running = False
@@ -18,15 +20,24 @@ class GameWindow:
         self.BORDER_COLOR = (100, 100, 120)
         self.TEXT_COLOR = (255, 255, 255)
         
-        # UI Layout
-        self.map_rect = pygame.Rect(10, 10, 800, 600)
-        self.card_area_rect = pygame.Rect(10, 620, 800, 170)
-        self.info_panel_rect = pygame.Rect(820, 10, 370, 780)
+        # UI Layout - will be updated dynamically
+        self.update_layout()
+    
+    def update_layout(self) -> None:
+        # Calculate layout based on current window size
+        info_panel_width = min(370, self.width // 3)
+        map_width = self.width - info_panel_width - 30
+        card_height = min(170, self.height // 5)
+        map_height = self.height - card_height - 30
+        
+        self.map_rect = pygame.Rect(10, 10, map_width, map_height)
+        self.card_area_rect = pygame.Rect(10, map_height + 20, map_width, card_height)
+        self.info_panel_rect = pygame.Rect(map_width + 20, 10, info_panel_width, self.height - 20)
         
     def initialize(self) -> bool:
         pygame.init()
-        self.screen = pygame.display.set_mode((self.width, self.height))
-        pygame.display.set_caption("Quantum Ticket-to-Ride")
+        self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
+        pygame.display.set_caption("Ket-to-Ride")
         
         # Initialize font
         pygame.font.init()
@@ -42,6 +53,11 @@ class GameWindow:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
+            elif event.type == pygame.VIDEORESIZE:
+                self.width = max(event.w, self.min_width)
+                self.height = max(event.h, self.min_height)
+                self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
+                self.update_layout()
     
     def draw_map_area(self) -> None:
         pygame.draw.rect(self.screen, self.MAP_COLOR, self.map_rect)
