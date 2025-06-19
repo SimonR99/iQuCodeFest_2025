@@ -26,7 +26,7 @@ class MapRenderer:
     
     def initialize_font(self, size: int = None):
         if size is None:
-            size = self.map_settings.get('font_size', 12)
+            size = self.map_settings.get('font_size', 20)  # Increased from 12
         self.font = pygame.font.Font(None, size)
     
     def scale_positions(self, map_rect: pygame.Rect) -> Dict[str, Tuple[int, int]]:
@@ -61,7 +61,7 @@ class MapRenderer:
         return scaled_positions
     
     def draw_route(self, surface: pygame.Surface, start_pos: Tuple[int, int], 
-                   end_pos: Tuple[int, int], route_data: Dict):
+                   end_pos: Tuple[int, int], route_data: Dict, offset: int = 0, highlighted: bool = False):
         gate = route_data['gate']
         length = route_data['length']
         claimed_by = route_data.get('claimed_by')
@@ -69,29 +69,122 @@ class MapRenderer:
         # Get route color based on gate type or claim status
         if claimed_by:
             color = (150, 150, 150)  # Gray for claimed routes
+        elif highlighted:
+            color = (255, 255, 0)   # Yellow for highlighted routes
         else:
             color = self.map_settings.get('gate_colors', {}).get(gate, (255, 255, 255))
         
-        # Draw route line
-        route_width = self.map_settings.get('route_width', 3)
-        pygame.draw.line(surface, color, start_pos, end_pos, route_width)
+        # Calculate perpendicular offset for parallel routes
+        if offset != 0:
+            dx = end_pos[0] - start_pos[0]
+            dy = end_pos[1] - start_pos[1]
+            length_route = math.sqrt(dx*dx + dy*dy)
+            if length_route > 0:
+                # Perpendicular vector
+                perp_x = -dy / length_route * offset
+                perp_y = dx / length_route * offset
+                start_pos = (int(start_pos[0] + perp_x), int(start_pos[1] + perp_y))
+                end_pos = (int(end_pos[0] + perp_x), int(end_pos[1] + perp_y))
         
-        # Calculate midpoint for gate label
-        mid_x = (start_pos[0] + end_pos[0]) // 2
-        mid_y = (start_pos[1] + end_pos[1]) // 2
+        # Draw route as individual train car segments (like Ticket to Ride)
+        self.draw_route_segments(surface, start_pos, end_pos, length, color, gate)
         
-        # Draw gate label background
-        if self.font:
-            gate_text = f"{gate}({length})"
-            text_surface = self.font.render(gate_text, True, (255, 255, 255))
-            text_rect = text_surface.get_rect(center=(mid_x, mid_y))
+    def draw_route_segments(self, surface: pygame.Surface, start_pos: Tuple[int, int], 
+                           end_pos: Tuple[int, int], length: int, color: Tuple[int, int, int], gate: str):
+        """Draw route as individual train car segments covering the full route distance"""
+        # Calculate route direction and length
+        dx = end_pos[0] - start_pos[0]
+        dy = end_pos[1] - start_pos[1]
+        route_length = math.sqrt(dx*dx + dy*dy)
+        
+        if route_length == 0 or length == 0:
+            return
+            
+        # Unit vector along the route
+        unit_x = dx / route_length
+        unit_y = dy / route_length
+        
+        # Calculate segment dimensions to cover the entire route
+        # Each segment gets an equal portion of the total route length
+        segment_spacing = 3  # Small gap between segments
+        total_spacing = (length - 1) * segment_spacing
+        available_length = route_length - total_spacing
+        
+        # Each segment gets equal length from available space
+        segment_length = available_length / length
+        
+        # Minimum segment length for visibility
+        if segment_length < 8:
+            segment_length = 8
+            segment_spacing = max(1, (route_length - length * segment_length) / max(1, length - 1))
+        
+        # Segment width (perpendicular to route)
+        segment_width = 14
+        
+        # Start from the beginning of the route
+        current_x = start_pos[0]
+        current_y = start_pos[1]
+        
+        # Draw each train car segment
+        for i in range(length):
+            # Calculate segment position
+            segment_start_x = current_x
+            segment_start_y = current_y
+            segment_end_x = current_x + unit_x * segment_length
+            segment_end_y = current_y + unit_y * segment_length
+            
+            # Draw train car as rounded rectangle
+            self.draw_train_car(surface, 
+                              (segment_start_x, segment_start_y), 
+                              (segment_end_x, segment_end_y), 
+                              segment_width, color, gate, i == 0)
+            
+            # Move to next segment position (including spacing)
+            current_x += unit_x * (segment_length + segment_spacing)
+            current_y += unit_y * (segment_length + segment_spacing)
+    
+    def draw_train_car(self, surface: pygame.Surface, start_pos: Tuple[float, float], 
+                       end_pos: Tuple[float, float], width: float, color: Tuple[int, int, int], 
+                       gate: str, show_label: bool = False):
+        """Draw an individual train car segment"""
+        # Calculate perpendicular vector for width
+        dx = end_pos[0] - start_pos[0]
+        dy = end_pos[1] - start_pos[1]
+        length = math.sqrt(dx*dx + dy*dy)
+        
+        if length == 0:
+            return
+            
+        # Unit perpendicular vector
+        perp_x = -dy / length * width / 2
+        perp_y = dx / length * width / 2
+        
+        # Calculate the four corners of the train car
+        corners = [
+            (int(start_pos[0] + perp_x), int(start_pos[1] + perp_y)),
+            (int(start_pos[0] - perp_x), int(start_pos[1] - perp_y)),
+            (int(end_pos[0] - perp_x), int(end_pos[1] - perp_y)),
+            (int(end_pos[0] + perp_x), int(end_pos[1] + perp_y))
+        ]
+        
+        # Draw the train car
+        pygame.draw.polygon(surface, color, corners)
+        pygame.draw.polygon(surface, (255, 255, 255), corners, 2)
+        
+        # Draw gate label on first segment
+        if show_label and self.font:
+            center_x = (start_pos[0] + end_pos[0]) / 2
+            center_y = (start_pos[1] + end_pos[1]) / 2
+            
+            # Use larger font for better visibility
+            gate_text = self.font.render(gate, True, (0, 0, 0))
+            text_rect = gate_text.get_rect(center=(int(center_x), int(center_y)))
             
             # Draw background for better readability
-            bg_rect = text_rect.inflate(6, 4)
-            pygame.draw.rect(surface, (0, 0, 0, 128), bg_rect)
-            pygame.draw.rect(surface, color, bg_rect, 1)
+            bg_rect = text_rect.inflate(4, 2)
+            pygame.draw.rect(surface, (255, 255, 255, 200), bg_rect)
             
-            surface.blit(text_surface, text_rect)
+            surface.blit(gate_text, text_rect)
     
     def draw_university(self, surface: pygame.Surface, position: Tuple[int, int], 
                        uni_data: Dict, uni_id: str):
@@ -106,15 +199,15 @@ class MapRenderer:
         # Draw university name
         if self.font:
             name_text = self.font.render(uni_id, True, (255, 255, 255))
-            text_rect = name_text.get_rect(center=(x, y + radius + 15))
+            text_rect = name_text.get_rect(center=(x, y + radius + 18))
             
             # Draw background for better readability
-            bg_rect = text_rect.inflate(4, 2)
-            pygame.draw.rect(surface, (0, 0, 0, 128), bg_rect)
+            bg_rect = text_rect.inflate(6, 4)
+            pygame.draw.rect(surface, (0, 0, 0, 180), bg_rect)
             
             surface.blit(name_text, text_rect)
     
-    def draw_map(self, surface: pygame.Surface, map_rect: pygame.Rect):
+    def draw_map(self, surface: pygame.Surface, map_rect: pygame.Rect, highlighted_route_idx: Optional[int] = None):
         if not self.font:
             self.initialize_font()
             
@@ -134,15 +227,50 @@ class MapRenderer:
         # Get scaled positions
         scaled_positions = self.scale_positions(map_rect)
         
-        # Draw routes first (so they appear behind universities)
-        for route in self.routes:
+        # Group routes by city pairs to handle parallel routes
+        route_groups = {}
+        route_to_index = {}  # Map route to original index
+        for i, route in enumerate(self.routes):
             from_uni = route['from']
             to_uni = route['to']
             
-            if from_uni in scaled_positions and to_uni in scaled_positions:
-                start_pos = scaled_positions[from_uni]
-                end_pos = scaled_positions[to_uni]
-                self.draw_route(surface, start_pos, end_pos, route)
+            # Create a consistent key regardless of direction
+            key = tuple(sorted([from_uni, to_uni]))
+            if key not in route_groups:
+                route_groups[key] = []
+            route_groups[key].append(route)
+            route_to_index[id(route)] = i
+        
+        # Draw routes first (so they appear behind universities)
+        for (uni1, uni2), routes_group in route_groups.items():
+            if uni1 in scaled_positions and uni2 in scaled_positions:
+                start_pos = scaled_positions[uni1]
+                end_pos = scaled_positions[uni2]
+                
+                # If there's only one route, draw normally
+                if len(routes_group) == 1:
+                    route = routes_group[0]
+                    route_idx = route_to_index[id(route)]
+                    highlighted = (highlighted_route_idx == route_idx)
+                    # Make sure we draw in the correct direction
+                    if route['from'] != uni1:
+                        start_pos, end_pos = end_pos, start_pos
+                    self.draw_route(surface, start_pos, end_pos, route, 0, highlighted)
+                else:
+                    # Multiple routes - draw them parallel
+                    offset_distance = 8  # Distance between parallel routes
+                    total_width = (len(routes_group) - 1) * offset_distance
+                    start_offset = -total_width / 2
+                    
+                    for i, route in enumerate(routes_group):
+                        route_idx = route_to_index[id(route)]
+                        highlighted = (highlighted_route_idx == route_idx)
+                        offset = start_offset + i * offset_distance
+                        # Make sure we draw in the correct direction
+                        route_start, route_end = start_pos, end_pos
+                        if route['from'] != uni1:
+                            route_start, route_end = route_end, route_start
+                        self.draw_route(surface, route_start, route_end, route, int(offset), highlighted)
         
         # Draw universities on top of routes
         for uni_id, uni_data in self.universities.items():
@@ -160,3 +288,54 @@ class MapRenderer:
             if distance <= radius:
                 return uni_id
         return None
+    
+    def get_route_at_position(self, map_rect: pygame.Rect, 
+                             mouse_pos: Tuple[int, int]) -> Optional[int]:
+        """Find which route (if any) is clicked by the mouse"""
+        if not self.universities:
+            return None
+            
+        scaled_positions = self.scale_positions(map_rect)
+        click_tolerance = 15  # How close to route line to register click
+        
+        for i, route in enumerate(self.routes):
+            from_uni = route['from']
+            to_uni = route['to']
+            
+            if from_uni in scaled_positions and to_uni in scaled_positions:
+                start_pos = scaled_positions[from_uni]
+                end_pos = scaled_positions[to_uni]
+                
+                # Calculate distance from point to line segment
+                distance = self._point_to_line_distance(mouse_pos, start_pos, end_pos)
+                
+                if distance <= click_tolerance:
+                    return i
+                    
+        return None
+    
+    def _point_to_line_distance(self, point: Tuple[int, int], 
+                               line_start: Tuple[int, int], 
+                               line_end: Tuple[int, int]) -> float:
+        """Calculate minimum distance from a point to a line segment"""
+        px, py = point
+        x1, y1 = line_start
+        x2, y2 = line_end
+        
+        # Vector from line start to end
+        dx = x2 - x1
+        dy = y2 - y1
+        
+        if dx == 0 and dy == 0:
+            # Line is actually a point
+            return math.sqrt((px - x1)**2 + (py - y1)**2)
+        
+        # Parameter t that represents position along line segment
+        t = max(0, min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy)))
+        
+        # Closest point on line segment
+        closest_x = x1 + t * dx
+        closest_y = y1 + t * dy
+        
+        # Distance from point to closest point on line
+        return math.sqrt((px - closest_x)**2 + (py - closest_y)**2)
