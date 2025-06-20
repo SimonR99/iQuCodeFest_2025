@@ -97,7 +97,7 @@
     {
       "from": "U Washington",
       "to": "Stanford",
-      "gate": ["CNOT", "CNOT"],
+      "gate": ["CNOT"],
       "length": 3,
       "claimed_by": null
     },
@@ -111,14 +111,14 @@
     {
       "from": "U Texas",
       "to": "U Kansas",
-      "gate": ["I","X"],
+      "gate": ["I","X", "H"],
       "length": 3,
       "claimed_by": null
     },
     {
       "from": "U Chicago",
       "to": "Carnegie",
-      "gate": ["CNOT","CNOT"],
+      "gate": ["CNOT"],
       "length": 1,
       "claimed_by": null
     },
@@ -146,7 +146,7 @@
     {
       "from": "Stanford",
       "to": "Caltech",
-      "gate": ["Z","Z"],
+      "gate": ["Z"],
       "length": 1,
       "claimed_by": null
     },
@@ -181,21 +181,14 @@
     {
       "from": "UBC",
       "to": "U Calgary",
-      "gate": ["Z","Z"],
-      "length": 3,
-      "claimed_by": null
-    },
-    {
-      "from": "U Calgary",
-      "to": "U Chicago",
-      "gate": ["Z","Z"],
+      "gate": ["Z","Z", "H"],
       "length": 3,
       "claimed_by": null
     },
     {
       "from": "Carnegie",
       "to": "U Chicago",
-      "gate": ["CNOT","CNOT"],
+      "gate": ["CNOT"],
       "length": 1,
       "claimed_by": null
     },
@@ -209,7 +202,7 @@
     {
       "from": "PolyMTL",
       "to": "U Calgary",
-      "gate": ["Z", "I"],
+      "gate": ["Z", "I", "X"],
       "length": 3,
       "claimed_by": null
     },
@@ -223,7 +216,7 @@
     {
       "from": "Harvard",
       "to": "Duke",
-      "gate": ["X", "Z"],
+      "gate": ["X", "Z", "H"],
       "length": 4,
       "claimed_by": null
     },
@@ -244,15 +237,22 @@
     {
       "from": "U Atlantis",
       "to": "Duke",
-      "gate": ["CNOT", "I"],
+      "gate": ["CNOT"],
       "length": 3,
       "claimed_by": null
     },
     {
-      "from": "U Atlantis",
-      "to": "GeorgiaTech",
-      "gate": ["H", "Z"],
+      "from": "U Kansas",
+      "to": "U Calgary",
+      "gate": ["H", "Z", "X"],
       "length": 4,
+      "claimed_by": null
+    },
+    {
+      "from": "U Chicago",
+      "to": "U Kansas",
+      "gate": ["CNOT", "H"],
+      "length": 3,
       "claimed_by": null
     }
   ],
