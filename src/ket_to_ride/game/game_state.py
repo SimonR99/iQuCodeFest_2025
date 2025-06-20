@@ -47,7 +47,6 @@ class GameState:
         gate_counts = {
             GateType.I: 12,
             GateType.X: 12, 
-            GateType.Y: 12,
             GateType.Z: 12,
             GateType.H: 12,
             GateType.CNOT: 8  # Fewer CNOT cards as they're more powerful

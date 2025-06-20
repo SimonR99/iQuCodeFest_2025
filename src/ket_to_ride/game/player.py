@@ -4,7 +4,6 @@ from enum import Enum
 class GateType(Enum):
     I = "I"
     X = "X"
-    Y = "Y"
     Z = "Z"
     H = "H"
     CNOT = "CNOT"
@@ -19,7 +18,6 @@ class Player:
         self.hand: Dict[GateType, int] = {
             GateType.I: 0,
             GateType.X: 0,
-            GateType.Y: 0,
             GateType.Z: 0,
             GateType.H: 0,
             GateType.CNOT: 0

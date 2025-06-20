@@ -13,11 +13,10 @@
       "border_color": [128, 0, 128]
     },
     "Z": {
-      "rgb": [120, 140, 160],
-      "hex": "#788CA0",
-      "name": "Slate Blue",
+      "rgb": [255, 165, 0],
       "image_path": "assets/cards/Z_gate.png",
-      "border_color": [120, 140, 160]
+      "rail_image_path": null,
+      "border_color": [255, 165, 0]
     },
     "H": {
       "rgb": [0, 128, 0],

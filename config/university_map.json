@@ -69,7 +69,7 @@
     {
       "from": "Stanford",
       "to": "Caltech",
-      "gate": "Y",
+      "gate": "Z",
       "length": 1,
       "claimed_by": null
     },
@@ -118,7 +118,7 @@
     {
       "from": "Cambridge",
       "to": "ETH",
-      "gate": "Y",
+      "gate": "H",
       "length": 2,
       "claimed_by": null
     },
@@ -159,7 +159,6 @@
     "gate_colors": {
       "I": [240, 235, 220],
       "X": [200, 120, 100],
-      "Y": [140, 160, 120],
       "Z": [120, 140, 160],
       "H": [190, 170, 130],
       "CNOT": [160, 120, 140]
