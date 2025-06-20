@@ -318,7 +318,7 @@ class MapRenderer:
                     self.draw_route(surface, start_pos, end_pos, route, 0, highlighted)
                 else:
                     # Multiple routes - draw them parallel
-                    offset_distance = 20  # Distance between parallel routes (increased for train car spacing)
+                    offset_distance = 25  # Distance between parallel routes (increased for visibility)
                     total_width = (len(routes_group) - 1) * offset_distance
                     start_offset = -total_width / 2
                     
