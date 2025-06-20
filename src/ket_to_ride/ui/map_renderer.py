@@ -548,7 +548,7 @@ class MapRenderer:
             # Draw text directly without background for cleaner look
             surface.blit(name_text, text_rect)
     
-    def draw_map(self, surface: pygame.Surface, map_rect: pygame.Rect, highlighted_route_idx: Optional[int] = None, game_state=None):
+    def draw_map(self, surface: pygame.Surface, map_rect: pygame.Rect, highlighted_route_idx: Optional[int] = None, highlighted_gate: Optional[str] = None, game_state=None):
         if not self.font:
             self.initialize_font()
             
@@ -577,7 +577,6 @@ class MapRenderer:
                 start_pos = scaled_positions[from_uni]
                 end_pos = scaled_positions[to_uni]
                 
-                highlighted = (highlighted_route_idx == i)
                 # Get player color if route is claimed
                 player_color = None
                 claimed_by = route.get('claimed_by')
@@ -622,9 +621,13 @@ class MapRenderer:
                         if temp_route['claimed_by']:
                             gate_player_color = self.get_player_color(temp_route['claimed_by'], game_state)
                         
+                        # Only highlight this specific gate if it matches the highlighted gate
+                        highlighted = (highlighted_route_idx == i and highlighted_gate == gate)
+                        
                         self.draw_route(surface, start_pos, end_pos, temp_route, int(offset), highlighted, gate_player_color)
                 else:
                     # Single path for single-gate routes
+                    highlighted = (highlighted_route_idx == i)
                     self.draw_route(surface, start_pos, end_pos, route, 0, highlighted, player_color)
         
         # Draw universities on top of routes

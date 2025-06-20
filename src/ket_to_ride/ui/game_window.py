@@ -569,6 +569,7 @@ class GameWindow:
         # Draw all panels
         panel_kwargs = {
             'selected_route_idx': self.selected_route_idx,
+            'selected_gate': self.selected_gate,
             'hovered_route_idx': self.hovered_route_idx,
             'available_cards': self.available_cards,
             'cards_drawn_this_turn': self.cards_drawn_this_turn,

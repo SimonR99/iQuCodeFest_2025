@@ -28,6 +28,7 @@ class MapPanel(BasePanel):
     def draw(self, surface: pygame.Surface, game_state, **kwargs):
         """Draw the map panel"""
         selected_route_idx = kwargs.get('selected_route_idx')
+        selected_gate = kwargs.get('selected_gate')
         hovered_route_idx = kwargs.get('hovered_route_idx')
         
         # Draw background image in map area if available
@@ -47,9 +48,16 @@ class MapPanel(BasePanel):
         # Draw border
         pygame.draw.rect(surface, self.border_color, self.rect, 3)
         
-        # Show selected route or hovered route
-        highlight_route = selected_route_idx if selected_route_idx is not None else hovered_route_idx
-        self.map_renderer.draw_map(surface, self.rect, highlight_route, game_state)
+        # Show selected route or hovered route for highlighting
+        # If we have a selected route with a specific gate, use that; otherwise fall back to hover
+        if selected_route_idx is not None:
+            highlight_route = selected_route_idx
+            highlight_gate = selected_gate
+        else:
+            highlight_route = hovered_route_idx
+            highlight_gate = None  # Hover doesn't specify a specific gate
+            
+        self.map_renderer.draw_map(surface, self.rect, highlight_route, highlight_gate, game_state)
         
     def _handle_click_internal(self, pos: Tuple[int, int], game_state, **kwargs) -> Optional[str]:
         """Handle clicks on the map"""
