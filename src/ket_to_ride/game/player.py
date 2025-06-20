@@ -23,8 +23,8 @@ class Player:
             GateType.CNOT: 0
         }
         
-        # Mission card
-        self.mission: Optional['MissionCard'] = None
+        # Mission cards - now supporting multiple missions
+        self.missions: List['MissionCard'] = []
         
         # Claimed routes
         self.claimed_routes: List[str] = []
@@ -35,6 +35,15 @@ class Player:
         
     def add_cards(self, gate_type: GateType, count: int = 1):
         self.hand[gate_type] += count
+        
+    def add_mission(self, mission: 'MissionCard'):
+        """Add a mission card to the player's missions"""
+        self.missions.append(mission)
+        
+    def remove_mission(self, mission: 'MissionCard'):
+        """Remove a mission card from the player's missions"""
+        if mission in self.missions:
+            self.missions.remove(mission)
         
     def can_claim_route(self, gate_type: GateType, length: int) -> bool:
         return self.hand[gate_type] >= length
@@ -50,8 +59,16 @@ class Player:
     def get_total_cards(self) -> int:
         return sum(self.hand.values())
         
+    def get_completed_missions(self) -> List['MissionCard']:
+        """Get list of completed missions"""
+        return [mission for mission in self.missions if mission.completed]
+        
+    def get_incomplete_missions(self) -> List['MissionCard']:
+        """Get list of incomplete missions"""
+        return [mission for mission in self.missions if not mission.completed]
+        
     def __str__(self):
-        return f"Player {self.name} (Cards: {self.get_total_cards()}, Routes: {len(self.claimed_routes)})"
+        return f"Player {self.name} (Cards: {self.get_total_cards()}, Routes: {len(self.claimed_routes)}, Missions: {len(self.missions)})"
 
 class MissionCard:
     def __init__(self, start_cities: List[str], target_city: str, 

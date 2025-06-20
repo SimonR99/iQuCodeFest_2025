@@ -43,6 +43,13 @@ class GameWindow:
         self.cards_drawn_this_turn = 0
         self.max_cards_per_turn = 2
         
+        # Mission drawing state
+        self.mission_selection_active = False
+        self.available_missions = []  # Missions drawn for selection
+        self.selected_missions = []   # Missions selected by player
+        self.mission_back_image = None
+        self.load_mission_back_image()
+        
         # Load colors from configuration
         self.colors = self.load_colors()
         self.BACKGROUND_COLOR = tuple(self.colors['ui_colors']['background']['rgb'])
@@ -76,7 +83,7 @@ class GameWindow:
         # Left sidebar for player info and scores
         sidebar_width = 250
         
-        # Right panel for available cards (like real Ticket to Ride)
+        # Right panel for available cards and mission deck
         right_panel_width = 200
         
         # Bottom area for player hand (increased size)
@@ -92,9 +99,18 @@ class GameWindow:
         self.sidebar_rect = pygame.Rect(10, 10, sidebar_width, self.height - 20)
         self.map_rect = pygame.Rect(map_x, map_y, map_width, map_height)
         
-        # Right panel for available cards
+        # Right panel split between available cards and mission deck
         right_panel_x = map_x + map_width + 10
-        self.available_cards_rect = pygame.Rect(right_panel_x, 10, right_panel_width, self.height - 20)
+        right_panel_height = self.height - 20
+        
+        # Top part for available gate cards (70% of right panel)
+        available_cards_height = int(right_panel_height * 0.7)
+        self.available_cards_rect = pygame.Rect(right_panel_x, 10, right_panel_width, available_cards_height)
+        
+        # Bottom part for mission deck (30% of right panel)
+        mission_deck_y = 10 + available_cards_height + 10
+        mission_deck_height = right_panel_height - available_cards_height - 10
+        self.mission_deck_rect = pygame.Rect(right_panel_x, mission_deck_y, right_panel_width, mission_deck_height)
         
         # Bottom area for player hand (aligned with map)
         hand_y = map_y + map_height + 10
@@ -146,6 +162,20 @@ class GameWindow:
         except Exception as e:
             print(f"Error loading background image: {e}")
             self.background_image = None
+            
+    def load_mission_back_image(self):
+        """Load the mission card back image"""
+        try:
+            image_path = os.path.join("assets", "cards", "destination_back.png")
+            if os.path.exists(image_path):
+                self.mission_back_image = pygame.image.load(image_path)
+                print(f"Loaded mission back image: {image_path}")
+            else:
+                print(f"Mission back image not found: {image_path}")
+                self.mission_back_image = None
+        except Exception as e:
+            print(f"Error loading mission back image: {e}")
+            self.mission_back_image = None
     
     def load_colors(self):
         """Load colors from configuration file"""
@@ -184,13 +214,34 @@ class GameWindow:
                 self.running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    self.running = False
+                    if self.mission_selection_active:
+                        self.cancel_mission_selection()
+                    else:
+                        self.running = False
                 elif event.key == pygame.K_SPACE:  # Next turn
-                    self.end_turn()
+                    if not self.mission_selection_active:
+                        self.end_turn()
                 elif event.key == pygame.K_c:  # Claim selected route
-                    self.handle_claim_route()
+                    if not self.mission_selection_active:
+                        self.handle_claim_route()
                 elif event.key == pygame.K_r:  # Cycle through routes
-                    self.cycle_route_selection()
+                    if not self.mission_selection_active:
+                        self.cycle_route_selection()
+                elif event.key == pygame.K_m:  # Draw mission cards
+                    if not self.mission_selection_active:
+                        self.draw_mission_cards()
+                elif event.key == pygame.K_RETURN:  # Confirm mission selection
+                    if self.mission_selection_active:
+                        self.confirm_mission_selection()
+                elif event.key == pygame.K_1:  # Toggle mission 1
+                    if self.mission_selection_active:
+                        self.toggle_mission_selection(0)
+                elif event.key == pygame.K_2:  # Toggle mission 2
+                    if self.mission_selection_active:
+                        self.toggle_mission_selection(1)
+                elif event.key == pygame.K_3:  # Toggle mission 3
+                    if self.mission_selection_active:
+                        self.toggle_mission_selection(2)
             elif event.type == pygame.VIDEORESIZE:
                 self.width = max(event.w, self.min_width)
                 self.height = max(event.h, self.min_height)
@@ -211,6 +262,16 @@ class GameWindow:
             self.hovered_route_idx = None
             
     def handle_mouse_click(self, pos: Tuple[int, int]):
+        # Handle mission selection if active
+        if self.mission_selection_active:
+            self.handle_mission_selection_click(pos)
+            return
+            
+        # Handle clicking on mission deck
+        if self.mission_deck_rect.collidepoint(pos):
+            self.draw_mission_cards()
+            return
+            
         # Handle clicking on available cards
         if self.available_cards_rect.collidepoint(pos):
             card_idx = self.get_clicked_available_card(pos)
@@ -233,6 +294,39 @@ class GameWindow:
         if self.selected_route_idx is not None:
             self.handle_claim_route()
             
+    def handle_mission_selection_click(self, pos: Tuple[int, int]):
+        """Handle clicks during mission selection"""
+        # Check if clicking on a mission card in the sidebar
+        if self.sidebar_rect.collidepoint(pos):
+            mission_idx = self.get_clicked_mission_card(pos)
+            if mission_idx is not None:
+                self.toggle_mission_selection(mission_idx)
+                
+    def get_clicked_mission_card(self, pos: Tuple[int, int]) -> Optional[int]:
+        """Determine which mission card was clicked during selection"""
+        # Mission cards are displayed in the sidebar during selection
+        # Calculate based on sidebar layout
+        if not self.available_missions:
+            return None
+            
+        # Mission cards start after the title and some info
+        start_y = self.sidebar_rect.y + 200  # Adjust based on sidebar content
+        card_height = 80
+        card_spacing = 10
+        
+        relative_y = pos[1] - start_y
+        if relative_y < 0:
+            return None
+            
+        for i in range(len(self.available_missions)):
+            card_top = i * (card_height + card_spacing)
+            card_bottom = card_top + card_height
+            
+            if card_top <= relative_y <= card_bottom:
+                return i
+                
+        return None
+        
     def get_clicked_available_card(self, pos: Tuple[int, int]) -> Optional[int]:
         """Determine which available card was clicked (vertical layout)"""
         if not self.available_cards:
@@ -270,15 +364,34 @@ class GameWindow:
         if card_idx >= len(self.available_cards):
             return
             
-        card_type = self.available_cards[card_idx]
+        current_player = self.game_state.get_current_player()
+        if not current_player or self.game_state.game_over:
+            return
+            
+        # Check if player can still draw cards this turn
+        if self.cards_drawn_this_turn >= self.max_cards_per_turn:
+            print("Already drew maximum cards this turn!")
+            return
+            
+        selected_card = self.available_cards[card_idx]
         
-        # Play mouse click sound
-        if self.audio_manager:
-            self.audio_manager.play_sound_effect("mouse_click")
-        
-        # Create animation for card movement
-        self.create_card_animation(card_idx, card_type)
-        
+        if selected_card == "DECK":
+            # Draw from deck (can draw 2 cards) - no animation needed
+            cards_to_draw = min(2 - self.cards_drawn_this_turn, 2)
+            cards = self.game_state.draw_cards(cards_to_draw)
+            for card in cards:
+                current_player.add_cards(card)
+            self.cards_drawn_this_turn += cards_to_draw
+            print(f"Drew {cards_to_draw} cards from deck")
+        else:
+            # Create animation for taking specific visible card
+            self.create_card_animation(card_idx, selected_card)
+            return  # Don't process immediately, wait for animation
+            
+        # Check if turn should end
+        if self.cards_drawn_this_turn >= self.max_cards_per_turn:
+            self.end_turn()
+            
     def create_card_animation(self, card_idx: int, card_type):
         """Create animation for card moving from trade row to hand"""
         # Calculate start position (card in trade row)
@@ -478,7 +591,7 @@ class GameWindow:
         pygame.draw.rect(self.screen, self.ACCENT_COLOR, header_rect)
         
         # Draw title (centered and properly sized)
-        title_text = self.font.render("Available Cards", True, self.TEXT_COLOR)
+        title_text = self.font.render("Gate Cards", True, self.TEXT_COLOR)
         title_rect = title_text.get_rect(center=(header_rect.centerx, header_rect.centery - 5))
         self.screen.blit(title_text, title_rect)
         
@@ -545,7 +658,69 @@ class GameWindow:
                 
                 # Draw card using image support function
                 self.card_renderer.draw_card_with_image_support(self.screen, card_rect, gate_type, can_draw, "", "", False)
+                
+    def draw_mission_deck(self) -> None:
+        # Draw mission deck area (bottom of right panel)
+        pygame.draw.rect(self.screen, self.CARD_AREA_COLOR, self.mission_deck_rect)
+        pygame.draw.rect(self.screen, self.BORDER_COLOR, self.mission_deck_rect, 3)
+        
+        # Add header accent
+        header_rect = pygame.Rect(self.mission_deck_rect.x + 3, self.mission_deck_rect.y + 3,
+                                 self.mission_deck_rect.width - 6, 30)
+        pygame.draw.rect(self.screen, self.ACCENT_COLOR, header_rect)
+        
+        # Draw title
+        title_text = self.small_font.render("Mission Cards", True, self.TEXT_COLOR)
+        title_rect = title_text.get_rect(center=(header_rect.centerx, header_rect.centery))
+        self.screen.blit(title_text, title_rect)
+        
+        # Draw mission deck count
+        deck_count_text = f"Deck: {len(self.game_state.mission_deck)}"
+        deck_count_surface = self.small_font.render(deck_count_text, True, self.TEXT_COLOR)
+        self.screen.blit(deck_count_surface, (self.mission_deck_rect.x + 10, self.mission_deck_rect.y + 35))
+        
+        # Draw mission deck card (clickable)
+        card_width = self.mission_deck_rect.width - 20
+        card_height = 80
+        card_x = self.mission_deck_rect.x + 10
+        card_y = self.mission_deck_rect.y + 55
+        
+        if len(self.game_state.mission_deck) > 0:
+            card_rect = pygame.Rect(card_x, card_y, card_width, card_height)
             
+            # Draw card shadow
+            shadow_rect = pygame.Rect(card_rect.x + 2, card_rect.y + 2, card_rect.width, card_rect.height)
+            pygame.draw.rect(self.screen, (0, 0, 0, 80), shadow_rect)
+            
+            # Draw mission card back
+            if self.mission_back_image:
+                # Scale the image to fit the card
+                scaled_image = pygame.transform.scale(self.mission_back_image, (card_rect.width, card_rect.height))
+                self.screen.blit(scaled_image, card_rect)
+            else:
+                # Fallback to colored rectangle
+                pygame.draw.rect(self.screen, (150, 100, 50), card_rect)
+                
+            # Draw border
+            pygame.draw.rect(self.screen, self.BORDER_COLOR, card_rect, 2)
+            
+            # Draw "MISSIONS" text
+            mission_text = self.small_font.render("MISSIONS", True, self.TEXT_COLOR)
+            text_rect = mission_text.get_rect(center=card_rect.center)
+            self.screen.blit(mission_text, text_rect)
+            
+            # Add click hint
+            hint_text = "Click to draw"
+            hint_surface = self.small_font.render(hint_text, True, self.TEXT_COLOR)
+            hint_rect = hint_surface.get_rect(center=(card_rect.centerx, card_rect.bottom - 15))
+            self.screen.blit(hint_surface, hint_rect)
+        else:
+            # Empty deck
+            empty_text = "No missions left"
+            empty_surface = self.small_font.render(empty_text, True, self.TEXT_COLOR)
+            empty_rect = empty_surface.get_rect(center=(self.mission_deck_rect.centerx, card_y + card_height // 2))
+            self.screen.blit(empty_surface, empty_rect)
+    
     def draw_hand_area(self) -> None:
         # Draw player hand area
         pygame.draw.rect(self.screen, self.CARD_AREA_COLOR, self.hand_area_rect)
@@ -621,10 +796,16 @@ class GameWindow:
         if not current_player:
             return
         
+        # Handle mission selection interface
+        if self.mission_selection_active:
+            self.draw_mission_selection_interface()
+            return
+        
         # Prepare info lines with current game state
         info_lines = [
             f"Turn: {self.game_state.turn_number}",
-            f"Cards in Deck: {len(self.game_state.deck)}",
+            f"Gate Cards in Deck: {len(self.game_state.deck)}",
+            f"Mission Cards in Deck: {len(self.game_state.mission_deck)}",
             "",
         ]
         
@@ -632,37 +813,47 @@ class GameWindow:
         info_lines.extend([
             f"Current Player:",
             f"> {current_player.name}",
-            f"Cards: {current_player.get_total_cards()}",
+            f"Gate Cards: {current_player.get_total_cards()}",
             f"Routes: {len(current_player.claimed_routes)}",
             f"Score: {current_player.score}",
             "",
         ])
         
         # Mission info
-        if current_player.mission:
-            mission = current_player.mission
-            start_str = " OR ".join(mission.start_cities)
+        if current_player.missions:
             info_lines.extend([
-                "Mission:",
-                f"From: {start_str}",
-                f"{mission.initial_state} → {mission.target_city} {mission.target_state}",
-                f"Points: {mission.points}",
-                "✓ Completed!" if mission.completed else "In Progress",
+                f"Missions ({len(current_player.missions)}):",
+            ])
+            for i, mission in enumerate(current_player.missions):
+                start_str = " OR ".join(mission.start_cities)
+                status = "✓" if mission.completed else "○"
+                info_lines.extend([
+                    f"{status} {start_str}",
+                    f"  {mission.initial_state} → {mission.target_city} {mission.target_state}",
+                    f"  Points: {mission.points}",
+                    "",
+                ])
+        else:
+            info_lines.extend([
+                "No missions yet",
+                "Press M to draw missions",
                 "",
             ])
         
         # Turn actions
         info_lines.extend([
             "Turn Actions:",
-            f"Cards drawn: {self.cards_drawn_this_turn}/{self.max_cards_per_turn}",
+            f"Gate cards drawn: {self.cards_drawn_this_turn}/{self.max_cards_per_turn}",
             "",
             "You can either:",
-            "• Draw cards (2 max)",
+            "• Draw gate cards (2 max)",
+            "• Draw mission cards (M)",
             "• Claim one route",
             "",
             "Controls:",
             "• Click cards to draw",
             "• Click routes to select",
+            "• M - Draw Missions",
             "• SPACE - End Turn",
             "• ESC - Exit",
             "",
@@ -683,7 +874,9 @@ class GameWindow:
         for i, player in enumerate(self.game_state.players):
             marker = "> " if player == current_player else "  "
             info_lines.append(f"{marker}{player.name}")
-            info_lines.append(f"  Cards: {player.get_total_cards()}, Routes: {len(player.claimed_routes)}, Score: {player.score}")
+            info_lines.append(f"  Gate Cards: {player.get_total_cards()}, Routes: {len(player.claimed_routes)}")
+            info_lines.append(f"  Missions: {len(player.missions)} ({len(player.get_completed_missions())} completed)")
+            info_lines.append(f"  Score: {player.score}")
         
         # Selected route info
         if self.selected_route_idx is not None:
@@ -704,6 +897,84 @@ class GameWindow:
                 text = self.font.render(line, True, color)
                 self.screen.blit(text, (self.sidebar_rect.x + 15, self.sidebar_rect.y + y_offset))
             y_offset += 22
+            
+    def draw_mission_selection_interface(self):
+        """Draw the mission selection interface in the sidebar"""
+        y_offset = 65
+        
+        # Title
+        title_lines = [
+            "MISSION SELECTION",
+            "Choose missions to keep:",
+            f"Selected: {len(self.selected_missions)}/3",
+            "Must keep at least 1",
+            "",
+        ]
+        
+        for line in title_lines:
+            if line:
+                text = self.font.render(line, True, self.ACCENT_COLOR)
+                self.screen.blit(text, (self.sidebar_rect.x + 15, self.sidebar_rect.y + y_offset))
+            y_offset += 22
+        
+        # Draw mission cards
+        card_height = 80
+        card_spacing = 10
+        card_width = self.sidebar_rect.width - 30
+        
+        for i, mission in enumerate(self.available_missions):
+            card_x = self.sidebar_rect.x + 15
+            card_y = self.sidebar_rect.y + y_offset
+            card_rect = pygame.Rect(card_x, card_y, card_width, card_height)
+            
+            # Determine if this mission is selected
+            is_selected = mission in self.selected_missions
+            
+            # Draw card background
+            bg_color = self.ACCENT_COLOR if is_selected else self.CARD_AREA_COLOR
+            pygame.draw.rect(self.screen, bg_color, card_rect)
+            pygame.draw.rect(self.screen, self.BORDER_COLOR, card_rect, 2)
+            
+            # Draw mission info
+            start_str = " OR ".join(mission.start_cities)
+            mission_lines = [
+                f"{i+1}. {start_str}",
+                f"{mission.initial_state} → {mission.target_city} {mission.target_state}",
+                f"Points: {mission.points}",
+            ]
+            
+            text_y = card_y + 10
+            for line in mission_lines:
+                text_color = self.TEXT_COLOR if not is_selected else (255, 255, 255)
+                text = self.small_font.render(line, True, text_color)
+                self.screen.blit(text, (card_x + 10, text_y))
+                text_y += 20
+                
+            # Draw selection indicator
+            if is_selected:
+                check_text = "✓ SELECTED"
+                check_surface = self.small_font.render(check_text, True, (255, 255, 255))
+                check_rect = check_surface.get_rect(right=card_rect.right - 10, bottom=card_rect.bottom - 5)
+                self.screen.blit(check_surface, check_rect)
+            
+            y_offset += card_height + card_spacing
+        
+        # Draw controls
+        y_offset += 20
+        control_lines = [
+            "",
+            "Controls:",
+            "• Click cards to select",
+            "• 1/2/3 - Toggle missions",
+            "• ENTER - Confirm selection",
+            "• ESC - Cancel",
+        ]
+        
+        for line in control_lines:
+            if line:
+                text = self.small_font.render(line, True, self.TEXT_COLOR)
+                self.screen.blit(text, (self.sidebar_rect.x + 15, self.sidebar_rect.y + y_offset))
+            y_offset += 18
     
     def draw_animated_cards(self):
         """Draw cards that are currently being animated"""
@@ -761,6 +1032,7 @@ class GameWindow:
         self.draw_sidebar()
         self.draw_map_area()
         self.draw_available_cards()
+        self.draw_mission_deck()
         self.draw_hand_area()
         self.draw_animated_cards()  # Draw animated cards on top
         
@@ -805,6 +1077,89 @@ class GameWindow:
         for animation in completed_new_animations:
             self.animation_manager.new_card_animations.remove(animation)
             self.animation_manager.clear_deck_animation_start()  # Clear deck animation state
+
+    def draw_mission_cards(self):
+        """Start mission card drawing process"""
+        current_player = self.game_state.get_current_player()
+        if not current_player or self.game_state.game_over:
+            return
+            
+        # Can't draw missions if already drew gate cards this turn
+        if self.cards_drawn_this_turn > 0:
+            print("Cannot draw missions after drawing gate cards!")
+            return
+            
+        # Can't draw missions if not enough in deck
+        if not self.game_state.can_draw_missions(current_player):
+            print("Not enough mission cards in deck!")
+            return
+            
+        # Draw 3 mission cards for selection
+        self.available_missions = self.game_state.draw_mission_cards(3)
+        self.selected_missions = []
+        self.mission_selection_active = True
+        print(f"Drew 3 mission cards for selection. Must keep at least 1.")
+        
+    def toggle_mission_selection(self, mission_idx: int):
+        """Toggle selection of a mission card"""
+        if not self.mission_selection_active or mission_idx >= len(self.available_missions):
+            return
+            
+        mission = self.available_missions[mission_idx]
+        
+        if mission in self.selected_missions:
+            self.selected_missions.remove(mission)
+            print(f"Deselected mission: {mission}")
+        else:
+            self.selected_missions.append(mission)
+            print(f"Selected mission: {mission}")
+            
+    def confirm_mission_selection(self):
+        """Confirm mission selection and end turn"""
+        if not self.mission_selection_active:
+            return
+            
+        # Must keep at least 1 mission
+        if len(self.selected_missions) == 0:
+            print("Must select at least 1 mission!")
+            return
+            
+        current_player = self.game_state.get_current_player()
+        if not current_player:
+            return
+            
+        # Assign selected missions to player
+        self.game_state.assign_missions_to_player(current_player, self.selected_missions)
+        
+        # Return unselected missions to deck
+        unselected = [m for m in self.available_missions if m not in self.selected_missions]
+        if unselected:
+            self.game_state.return_missions_to_deck(unselected)
+            
+        print(f"Confirmed {len(self.selected_missions)} missions for {current_player.name}")
+        
+        # Clear mission selection state
+        self.mission_selection_active = False
+        self.available_missions = []
+        self.selected_missions = []
+        
+        # End turn
+        self.end_turn()
+        
+    def cancel_mission_selection(self):
+        """Cancel mission selection and return all cards to deck"""
+        if not self.mission_selection_active:
+            return
+            
+        # Return all missions to deck
+        self.game_state.return_missions_to_deck(self.available_missions)
+        
+        print("Cancelled mission selection")
+        
+        # Clear mission selection state
+        self.mission_selection_active = False
+        self.available_missions = []
+        self.selected_missions = []
 
 def main():
     game_window = GameWindow()

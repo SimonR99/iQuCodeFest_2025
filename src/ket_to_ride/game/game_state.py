@@ -158,10 +158,8 @@ class GameState:
                 card = self.deck.pop()
                 player.add_cards(card)
                 
-        # Deal mission card
-        if self.mission_deck:
-            player.mission = self.mission_deck.pop()
-            
+        # Don't automatically assign mission - let player draw missions later
+        
         return player
         
     def get_current_player(self) -> Optional[Player]:
@@ -215,37 +213,48 @@ class GameState:
         return False
         
     def check_mission_completion(self, player: Player) -> bool:
-        if not player.mission or player.mission.completed:
-            return False
-            
-        # Check if player has a path from any start city to target
-        for start_city in player.mission.start_cities:
-            path_routes = self.get_path_routes(player, start_city, player.mission.target_city)
-            if path_routes:
-                # Simulate the quantum circuit
-                route_gates = [(route['gate'], route['length']) for route in path_routes]
-                success, final_state, gate_sequence = self.quantum_simulator.simulate_path(
-                    player.mission.initial_state,
-                    route_gates,
-                    player.mission.target_state
-                )
+        """Check if any of the player's missions are completed"""
+        any_completed = False
+        
+        for mission in player.missions:
+            if mission.completed:
+                continue  # Already completed
                 
-                print(f"Quantum simulation for {player.name}:")
-                print(f"  Path: {start_city} → {player.mission.target_city}")
-                print(f"  Gate sequence: {' → '.join(gate_sequence)}")
-                print(f"  Initial: {player.mission.initial_state}, Target: {player.mission.target_state}")
-                print(f"  Final probabilities: {final_state.get_probabilities()}")
-                print(f"  Success: {success}")
-                
-                if success:
-                    player.mission.completed = True
-                    player.score += player.mission.points
-                    player.has_won = True
-                    self.winner = player
-                    self.game_over = True
-                    return True
+            # Check if player has a path from any start city to target
+            for start_city in mission.start_cities:
+                path_routes = self.get_path_routes(player, start_city, mission.target_city)
+                if path_routes:
+                    # Simulate the quantum circuit
+                    route_gates = [(route['gate'], route['length']) for route in path_routes]
+                    success, final_state, gate_sequence = self.quantum_simulator.simulate_path(
+                        mission.initial_state,
+                        route_gates,
+                        mission.target_state
+                    )
                     
-        return False
+                    print(f"Quantum simulation for {player.name}:")
+                    print(f"  Path: {start_city} → {mission.target_city}")
+                    print(f"  Gate sequence: {' → '.join(gate_sequence)}")
+                    print(f"  Initial: {mission.initial_state}, Target: {mission.target_state}")
+                    print(f"  Final probabilities: {final_state.get_probabilities()}")
+                    print(f"  Success: {success}")
+                    
+                    if success:
+                        mission.completed = True
+                        player.score += mission.points
+                        any_completed = True
+                        print(f"🎉 {player.name} completed a mission worth {mission.points} points!")
+                        break  # Break out of start_cities loop for this mission
+                        
+        # Check if player has completed all their missions (win condition)
+        if player.missions and all(mission.completed for mission in player.missions):
+            player.has_won = True
+            self.winner = player
+            self.game_over = True
+            print(f"🎉 {player.name} has completed ALL missions and won the game!")
+            return True
+            
+        return any_completed
         
     def get_path_routes(self, player: Player, start: str, target: str) -> List[Dict]:
         """Get the actual routes in a path from start to target for a player"""
@@ -296,9 +305,7 @@ class GameState:
         if not current_player:
             return
             
-        # 1. Mission completion (primary win condition)
-        if current_player.mission and current_player.mission.completed:
-            return  # Already handled in check_mission_completion
+        # 1. Mission completion (primary win condition) - handled in check_mission_completion
             
         # 2. Player has very few cards left (triggers last round)
         if current_player.get_total_cards() <= 2:
@@ -324,12 +331,14 @@ class GameState:
             # Points from routes (1 point per route segment)
             route_points = sum(len(route.split('-')) for route in player.claimed_routes)
             
-            # Mission points (already added if completed)
-            mission_points = player.mission.points if player.mission and player.mission.completed else 0
-            
-            # Penalty for incomplete mission
-            if player.mission and not player.mission.completed:
-                mission_points = -player.mission.points // 2
+            # Mission points
+            mission_points = 0
+            for mission in player.missions:
+                if mission.completed:
+                    mission_points += mission.points
+                else:
+                    # Penalty for incomplete mission
+                    mission_points -= mission.points // 2
                 
             player.score = route_points + mission_points
             print(f"{player.name}: {route_points} route points + {mission_points} mission points = {player.score} total")
@@ -354,13 +363,39 @@ class GameState:
             'game_over': self.game_over,
             'winner': self.winner.name if self.winner else None,
             'deck_size': len(self.deck),
+            'mission_deck_size': len(self.mission_deck),
             'players': [
                 {
                     'name': p.name,
                     'cards': dict(p.hand),
                     'routes': len(p.claimed_routes),
-                    'mission': str(p.mission) if p.mission else "None"
+                    'missions': [str(mission) for mission in p.missions],
+                    'completed_missions': len(p.get_completed_missions()),
+                    'total_missions': len(p.missions)
                 }
                 for p in self.players
             ]
         }
+        
+    def draw_mission_cards(self, count: int = 3) -> List[MissionCard]:
+        """Draw mission cards for selection (like Ticket to Ride)"""
+        drawn_missions = []
+        for _ in range(min(count, len(self.mission_deck))):
+            if self.mission_deck:
+                drawn_missions.append(self.mission_deck.pop())
+        return drawn_missions
+        
+    def return_missions_to_deck(self, missions: List[MissionCard]):
+        """Return unused mission cards to the deck and shuffle"""
+        self.mission_deck.extend(missions)
+        random.shuffle(self.mission_deck)
+        
+    def assign_missions_to_player(self, player: Player, missions: List[MissionCard]):
+        """Assign selected missions to a player"""
+        for mission in missions:
+            player.add_mission(mission)
+            
+    def can_draw_missions(self, player: Player) -> bool:
+        """Check if player can draw mission cards (not after drawing gate cards)"""
+        # In Ticket to Ride, you can draw missions as an alternative to drawing train cards
+        return len(self.mission_deck) >= 3  # Need at least 3 cards to draw
