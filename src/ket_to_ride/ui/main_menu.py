@@ -89,7 +89,7 @@ class MainMenu:
         button_width = 300
         button_height = 60
         button_spacing = 20
-        start_y = self.height // 2 - 20
+        start_y = self.height // 2 - 80
         
         for i, button in enumerate(self.buttons):
             button_x = self.width // 2 - button_width // 2
