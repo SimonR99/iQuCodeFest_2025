@@ -84,21 +84,26 @@ class MainMenu:
                 self.running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
+                    self.audio_manager.play_sound_effect("mouse_click")
                     self.running = False
                 elif event.key == pygame.K_UP:
+                    self.audio_manager.play_sound_effect("mouse_click")
                     self.selected_button = (self.selected_button - 1) % len(self.buttons)
                     while not self.buttons[self.selected_button]["enabled"]:
                         self.selected_button = (self.selected_button - 1) % len(self.buttons)
                 elif event.key == pygame.K_DOWN:
+                    self.audio_manager.play_sound_effect("mouse_click")
                     self.selected_button = (self.selected_button + 1) % len(self.buttons)
                     while not self.buttons[self.selected_button]["enabled"]:
                         self.selected_button = (self.selected_button + 1) % len(self.buttons)
                 elif event.key == pygame.K_RETURN:
+                    self.audio_manager.play_sound_effect("mouse_click")
                     return self.buttons[self.selected_button]["action"]
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Left click
                     action = self.handle_mouse_click(event.pos)
                     if action:
+                        self.audio_manager.play_sound_effect("mouse_click")
                         return action
             elif event.type == pygame.MOUSEMOTION:
                 self.handle_mouse_hover(event.pos)
@@ -229,7 +234,7 @@ class MainMenu:
             if action:
                 if action == "local":
                     # Launch the game without quitting pygame
-                    game_window = GameWindow()
+                    game_window = GameWindow(audio_manager=self.audio_manager)
                     game_window.run()
                     return "local"
                 elif action == "exit":

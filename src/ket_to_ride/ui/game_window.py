@@ -11,11 +11,11 @@ from .card_renderer import CardRenderer
 from ..game import GameState, GateType
 
 class GameWindow:
-    def __init__(self, width: int = 1280, height: int = 720):
+    def __init__(self, width: int = 1280, height: int = 720, audio_manager=None):
         self.width = width
         self.height = height
-        self.min_width = 1000
-        self.min_height = 700
+        self.min_width = 800
+        self.min_height = 600
         self.screen: Optional[pygame.Surface] = None
         self.clock = pygame.time.Clock()
         self.running = False
@@ -67,6 +67,9 @@ class GameWindow:
         
         # Card renderer will be initialized after fonts are created
         self.card_renderer = None
+        
+        # Audio manager reference
+        self.audio_manager = audio_manager
     
     def update_layout(self) -> None:
         # Layout like real Ticket to Ride
@@ -267,34 +270,15 @@ class GameWindow:
         if card_idx >= len(self.available_cards):
             return
             
-        current_player = self.game_state.get_current_player()
-        if not current_player or self.game_state.game_over:
-            return
-            
-        # Check if player can still draw cards this turn
-        if self.cards_drawn_this_turn >= self.max_cards_per_turn:
-            print("Already drew maximum cards this turn!")
-            return
-            
-        selected_card = self.available_cards[card_idx]
+        card_type = self.available_cards[card_idx]
         
-        if selected_card == "DECK":
-            # Draw from deck (can draw 2 cards) - no animation needed
-            cards_to_draw = min(2 - self.cards_drawn_this_turn, 2)
-            cards = self.game_state.draw_cards(cards_to_draw)
-            for card in cards:
-                current_player.add_cards(card)
-            self.cards_drawn_this_turn += cards_to_draw
-            print(f"Drew {cards_to_draw} cards from deck")
-        else:
-            # Create animation for taking specific visible card
-            self.create_card_animation(card_idx, selected_card)
-            return  # Don't process immediately, wait for animation
-            
-        # Check if turn should end
-        if self.cards_drawn_this_turn >= self.max_cards_per_turn:
-            self.end_turn()
-            
+        # Play mouse click sound
+        if self.audio_manager:
+            self.audio_manager.play_sound_effect("mouse_click")
+        
+        # Create animation for card movement
+        self.create_card_animation(card_idx, card_type)
+        
     def create_card_animation(self, card_idx: int, card_type):
         """Create animation for card moving from trade row to hand"""
         # Calculate start position (card in trade row)
@@ -440,17 +424,23 @@ class GameWindow:
             print("Cannot claim route after drawing cards!")
             return
             
-        if self.game_state.claim_route(current_player, self.selected_route_idx):
-            print(f"Route claimed successfully by {current_player.name}!")
+        route = self.game_state.routes[self.selected_route_idx]
+        gate_type = route['gate']
+        required_cards = route['length']
+        
+        if current_player.hand.get(gate_type, 0) >= required_cards:
+            # Claim the route
+            current_player.claim_route(self.selected_route_idx, required_cards, gate_type)
+            route['claimed_by'] = current_player.name
             
-            # Check for mission completion
-            if self.game_state.check_mission_completion(current_player):
-                print(f"🎉 {current_player.name} has completed their mission and won!")
-                
-            self.end_turn()  # End turn after claiming route
+            # Play mouse click sound
+            if self.audio_manager:
+                self.audio_manager.play_sound_effect("mouse_click")
+            
+            print(f"Claimed route: {route['from']} -> {route['to']}")
+            self.selected_route_idx = None
         else:
-            route = self.game_state.routes[self.selected_route_idx]
-            print(f"Cannot claim route! Need {route['length']} {route['gate']} cards")
+            print(f"Not enough {gate_type.value} cards! Need {required_cards}, have {current_player.hand.get(gate_type, 0)}")
     
     def draw_map_area(self) -> None:
         # Draw background image in map area if available

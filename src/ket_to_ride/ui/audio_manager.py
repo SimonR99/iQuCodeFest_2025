@@ -41,6 +41,21 @@ class AudioManager:
             print("No background music found")
             self.audio_files["background_music"] = None
             
+        # Load sound effects
+        sfx_files = [
+            ("mouse_click", "mouse_click.mp3"),
+            ("mouse_click", "mouse_click.wav"),
+            ("button_click", "button_click.mp3"),
+            ("button_click", "button_click.wav")
+        ]
+        
+        for sfx_name, sfx_file in sfx_files:
+            sfx_path = os.path.join(self.audio_path, sfx_file)
+            if os.path.exists(sfx_path):
+                self.audio_files[sfx_name] = sfx_path
+                print(f"Loaded SFX: {sfx_name} - {sfx_path}")
+                break
+        
     def play_background_music(self, music_name: str = "background_music", loop: bool = True):
         """Play background music"""
         if not self.music_enabled:
@@ -82,6 +97,20 @@ class AudioManager:
         """Set sound effects volume (0.0 to 1.0)"""
         self.sfx_volume = max(0.0, min(1.0, volume))
         
+    def play_sound_effect(self, sfx_name: str):
+        """Play a sound effect"""
+        if not self.sfx_enabled:
+            return
+            
+        sfx_path = self.audio_files.get(sfx_name)
+        if sfx_path:
+            try:
+                sound = pygame.mixer.Sound(sfx_path)
+                sound.set_volume(self.sfx_volume)
+                sound.play()
+            except Exception as e:
+                print(f"Error playing sound effect {sfx_name}: {e}")
+                
     def toggle_music(self):
         """Toggle music on/off"""
         self.music_enabled = not self.music_enabled
