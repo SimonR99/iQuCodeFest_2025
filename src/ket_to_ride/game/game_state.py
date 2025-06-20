@@ -190,26 +190,54 @@ class GameState:
         if route.get('claimed_by') is not None:
             return False
             
-        gate_type = GateType(route['gate'])
+        # Handle both array and single gate formats for backward compatibility
+        gates = route['gate']
+        if isinstance(gates, str):
+            gates = [gates]  # Convert single gate to array
+        
         length = route['length']
         
-        return player.can_claim_route(gate_type, length)
+        # Player must have enough cards of at least one of the gate types
+        for gate in gates:
+            gate_type = GateType(gate)
+            if player.can_claim_route(gate_type, length):
+                return True
+        return False
         
-    def claim_route(self, player: Player, route_idx: int) -> bool:
+    def claim_route(self, player: Player, route_idx: int, selected_gate: str = None) -> bool:
         if not self.can_claim_route(player, route_idx):
             return False
             
         route = self.routes[route_idx]
-        gate_type = GateType(route['gate'])
+        
+        # Handle both array and single gate formats for backward compatibility
+        gates = route['gate']
+        if isinstance(gates, str):
+            gates = [gates]  # Convert single gate to array
+        
         length = route['length']
-        route_id = f"{route['from']}-{route['to']}-{route['gate']}"
+        
+        # If no specific gate is selected and there are multiple options, use the first available one
+        if selected_gate is None:
+            for gate in gates:
+                gate_type = GateType(gate)
+                if player.can_claim_route(gate_type, length):
+                    selected_gate = gate
+                    break
+        
+        if selected_gate is None or selected_gate not in gates:
+            return False
+            
+        gate_type = GateType(selected_gate)
+        route_id = f"{route['from']}-{route['to']}-{selected_gate}"
         
         if player.claim_route(gate_type, length, route_id):
             route['claimed_by'] = player.player_id
+            route['claimed_with_gate'] = selected_gate  # Store which gate was used
             # Add route scoring
             self.add_route_scoring(player, length)
             return True
-            
+
         return False
         
     def check_mission_completion(self, player: Player) -> bool:
@@ -225,7 +253,20 @@ class GameState:
                 path_routes = self.get_path_routes(player, start_city, mission.target_city)
                 if path_routes:
                     # Simulate the quantum circuit
-                    route_gates = [(route['gate'], route['length']) for route in path_routes]
+                    route_gates = []
+                    for route in path_routes:
+                        # Use the gate that was claimed with (stored in claimed_with_gate)
+                        # or the first gate if it's an array
+                        gate = route.get('claimed_with_gate')
+                        if gate is None:
+                            # Fallback: use first gate from array or the gate if it's a string
+                            gates = route['gate']
+                            if isinstance(gates, list):
+                                gate = gates[0]
+                            else:
+                                gate = gates
+                        route_gates.append((gate, route['length']))
+                    
                     success, final_state, gate_sequence = self.quantum_simulator.simulate_path(
                         mission.initial_state,
                         route_gates,

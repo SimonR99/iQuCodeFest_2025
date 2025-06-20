@@ -160,6 +160,13 @@ class GameWindow:
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:
                     self.handle_mouse_click(event.pos)
+                elif event.button == 4:  # Scroll up
+                    self.handle_scroll(1)
+                elif event.button == 5:  # Scroll down
+                    self.handle_scroll(-1)
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 1:
+                    self.handle_mouse_release(event.pos)
             elif event.type == pygame.MOUSEMOTION:
                 self.handle_mouse_motion(event.pos)
     
@@ -206,13 +213,25 @@ class GameWindow:
         if self.mission_selection_active:
             self.handle_mission_selection_click(pos)
                 
+    def handle_scroll(self, scroll_direction: int):
+        """Handle scroll wheel events"""
+        # Check if mouse is over sidebar for scrolling
+        mouse_pos = pygame.mouse.get_pos()
+        if self.panels['sidebar'].rect.collidepoint(mouse_pos):
+            self.panels['sidebar'].handle_scroll(scroll_direction)
+    
+    def handle_mouse_release(self, pos: Tuple[int, int]):
+        """Handle mouse button release"""
+        # Stop scrollbar dragging
+        self.panels['sidebar'].stop_scrollbar_drag()
+        
     def handle_mouse_motion(self, pos: Tuple[int, int]):
         """Handle mouse motion for hover effects"""
         # Update hovered route from map panel
         hover_info = self.panels['map'].handle_hover(pos, self.game_state)
         self.hovered_route_idx = hover_info
         
-        # Handle sidebar button hover effects
+        # Handle sidebar button hover effects and scrollbar dragging
         if self.panels['sidebar'].rect.collidepoint(pos):
             self.panels['sidebar'].handle_mouse_motion(pos)
         
@@ -381,27 +400,40 @@ class GameWindow:
             return
             
         route = self.game_state.routes[self.selected_route_idx]
-        gate_type_str = route['gate']
+        
+        # Handle both array and single gate formats
+        gates = route['gate']
+        if isinstance(gates, str):
+            gates = [gates]
+        
         required_cards = route['length']
         
-        # Convert string to GateType enum
+        # Find which gate types the player can afford
+        affordable_gates = []
         from ..game import GateType
-        gate_type = GateType(gate_type_str)
+        for gate_str in gates:
+            gate_type = GateType(gate_str)
+            if current_player.hand.get(gate_type, 0) >= required_cards:
+                affordable_gates.append(gate_str)
         
-        if current_player.hand.get(gate_type, 0) >= required_cards:
-            # Create route ID string
-            route_id = f"{route['from']}-{route['to']}-{gate_type_str}"
-            
-            current_player.claim_route(gate_type, required_cards, route_id)
-            route['claimed_by'] = current_player.name
-            
+        if not affordable_gates:
+            gate_names = '/'.join(gates)
+            print(f"Not enough cards for any gate type! Need {required_cards} of: {gate_names}")
+            return
+        
+        # If multiple gates are available, use the first affordable one for now
+        # TODO: In the future, could add UI for player to choose
+        selected_gate = affordable_gates[0]
+        
+        # Use the game state's claim_route method which handles the new format
+        if self.game_state.claim_route(current_player, self.selected_route_idx, selected_gate):
             if self.audio_manager:
                 self.audio_manager.play_sound_effect("mouse_click")
             
-            print(f"Claimed route: {route['from']} -> {route['to']}")
+            print(f"Claimed route: {route['from']} -> {route['to']} with {selected_gate} gate")
             self.selected_route_idx = None
         else:
-            print(f"Not enough {gate_type_str} cards!")
+            print("Failed to claim route")
     
     def end_turn(self):
         """End current player's turn"""
