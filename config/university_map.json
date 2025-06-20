@@ -299,8 +299,18 @@
   "map_settings": {
     "background_color": [85, 95, 82],
     "university_radius": 18,
-    "route_width": 4,
+    "route_width": 12,
     "font_size": 22,
-    "parallel_route_offset": 25
+    "parallel_route_offset": 25,
+    "cnot_settings": {
+      "rail_width_ratio": 0.6,
+      "rail_separation_ratio": 0.4,
+      "control_dot_radius": 4,
+      "target_circle_radius": 6,
+      "connection_line_width": 2,
+      "label_offset_y": -15,
+      "control_color_offset": 0,
+      "target_color_offset": -30
+    }
   }
 }

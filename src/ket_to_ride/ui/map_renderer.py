@@ -218,7 +218,7 @@ class MapRenderer:
             segment_spacing = max(1, (route_length - length * segment_length) / max(1, length - 1))
         
         # Segment width (perpendicular to route)
-        segment_width = 14
+        segment_width = self.map_settings.get('route_width', 14)
         
         # Start from the beginning of the route
         current_x = start_pos[0]
@@ -332,7 +332,13 @@ class MapRenderer:
         
         if length == 0:
             return
-            
+        
+        # Special handling for CNOT gates - draw as double rails (thinner, divided)
+        if gate == 'CNOT':
+            self._draw_cnot_double_rails(surface, start_pos, end_pos, width, color, show_label)
+            return
+        
+        # Regular single rail for other gates
         # Unit perpendicular vector
         perp_x = -dy / length * width / 2
         perp_y = dx / length * width / 2
@@ -401,6 +407,109 @@ class MapRenderer:
             text_rect = gate_text.get_rect(center=(int(label_center_x), int(label_center_y)))
             
             # Draw text directly without background for cleaner look
+            surface.blit(gate_text, text_rect)
+    
+    def _draw_cnot_double_rails(self, surface: pygame.Surface, start_pos: Tuple[float, float], 
+                               end_pos: Tuple[float, float], width: float, color: Tuple[int, int, int], 
+                               show_label: bool = False):
+        """Draw CNOT gate as two parallel thinner rails representing two qubits"""
+        # Calculate direction and perpendicular vectors
+        dx = end_pos[0] - start_pos[0]
+        dy = end_pos[1] - start_pos[1]
+        length = math.sqrt(dx*dx + dy*dy)
+        
+        if length == 0:
+            return
+        
+        # Unit perpendicular vector
+        perp_x = -dy / length
+        perp_y = dx / length
+        
+        # Get CNOT settings from configuration
+        cnot_config = self.map_settings.get('cnot_settings', {})
+        rail_width_ratio = cnot_config.get('rail_width_ratio', 0.6)
+        rail_separation_ratio = cnot_config.get('rail_separation_ratio', 0.4)
+        
+        # Make rails thinner and create separation between them
+        rail_width = width * rail_width_ratio
+        rail_separation = width * rail_separation_ratio
+        
+        # Calculate positions for two parallel rails
+        rail_offset = rail_separation / 2
+        
+        # Rail 1 (control qubit)
+        rail1_start = (start_pos[0] + perp_x * rail_offset, start_pos[1] + perp_y * rail_offset)
+        rail1_end = (end_pos[0] + perp_x * rail_offset, end_pos[1] + perp_y * rail_offset)
+        
+        # Rail 2 (target qubit)
+        rail2_start = (start_pos[0] - perp_x * rail_offset, start_pos[1] - perp_y * rail_offset)
+        rail2_end = (end_pos[0] - perp_x * rail_offset, end_pos[1] - perp_y * rail_offset)
+        
+        # Draw the two rails
+        for i, (rail_start, rail_end) in enumerate([(rail1_start, rail1_end), (rail2_start, rail2_end)]):
+            # Calculate corners for this rail
+            rail_perp_x = perp_x * rail_width / 2
+            rail_perp_y = perp_y * rail_width / 2
+            
+            corners = [
+                (int(rail_start[0] + rail_perp_x), int(rail_start[1] + rail_perp_y)),
+                (int(rail_start[0] - rail_perp_x), int(rail_start[1] - rail_perp_y)),
+                (int(rail_end[0] - rail_perp_x), int(rail_end[1] - rail_perp_y)),
+                (int(rail_end[0] + rail_perp_x), int(rail_end[1] + rail_perp_y))
+            ]
+            
+            # Use slightly different colors for the two rails to show they're separate qubits
+            control_color_offset = cnot_config.get('control_color_offset', 0)
+            target_color_offset = cnot_config.get('target_color_offset', -30)
+            
+            if i == 0:  # Control rail
+                rail_color = tuple(min(255, max(0, c + control_color_offset)) for c in color)
+            else:  # Target rail
+                rail_color = tuple(min(255, max(0, c + target_color_offset)) for c in color)
+            
+            # Draw rail
+            pygame.draw.polygon(surface, rail_color, corners)
+            pygame.draw.polygon(surface, (255, 255, 255), corners, 1)  # Thinner border
+        
+        # Draw connection between rails to show they're part of the same CNOT gate
+        center_x = (start_pos[0] + end_pos[0]) / 2
+        center_y = (start_pos[1] + end_pos[1]) / 2
+        
+        # Get symbol settings
+        connection_line_width = cnot_config.get('connection_line_width', 2)
+        control_dot_radius = cnot_config.get('control_dot_radius', 4)
+        target_circle_radius = cnot_config.get('target_circle_radius', 6)
+        
+        # Draw a thin connecting line
+        connect_start = (center_x + perp_x * rail_offset, center_y + perp_y * rail_offset)
+        connect_end = (center_x - perp_x * rail_offset, center_y - perp_y * rail_offset)
+        pygame.draw.line(surface, (255, 255, 255), connect_start, connect_end, connection_line_width)
+        
+        # Draw control dot on first rail
+        control_pos = (int(center_x + perp_x * rail_offset), int(center_y + perp_y * rail_offset))
+        pygame.draw.circle(surface, (255, 255, 255), control_pos, control_dot_radius)
+        pygame.draw.circle(surface, (0, 0, 0), control_pos, control_dot_radius, 2)
+        
+        # Draw target circle on second rail
+        target_pos = (int(center_x - perp_x * rail_offset), int(center_y - perp_y * rail_offset))
+        pygame.draw.circle(surface, (255, 255, 255), target_pos, target_circle_radius, 2)
+        cross_size = target_circle_radius - 2
+        pygame.draw.line(surface, (255, 255, 255), (target_pos[0]-cross_size, target_pos[1]), (target_pos[0]+cross_size, target_pos[1]), 2)
+        pygame.draw.line(surface, (255, 255, 255), (target_pos[0], target_pos[1]-cross_size), (target_pos[0], target_pos[1]+cross_size), 2)
+        
+        # Draw gate label
+        if show_label and self.font:
+            label_offset_y = cnot_config.get('label_offset_y', -15)
+            label_center_x = center_x
+            label_center_y = center_y + label_offset_y
+            
+            # Use white text for better visibility
+            gate_text = self.font.render("CNOT", True, (255, 255, 255))
+            text_rect = gate_text.get_rect(center=(int(label_center_x), int(label_center_y)))
+            
+            # Draw text with small background for readability
+            bg_rect = text_rect.inflate(4, 2)
+            pygame.draw.rect(surface, (0, 0, 0, 128), bg_rect)
             surface.blit(gate_text, text_rect)
     
     def draw_university(self, surface: pygame.Surface, position: Tuple[int, int], 
@@ -491,7 +600,7 @@ class MapRenderer:
                 # If route has multiple gates, draw them as parallel paths
                 if len(gates) > 1:
                     # Draw multiple parallel paths, showing individual claim status
-                    offset_distance = 25  # Distance between parallel routes
+                    offset_distance = self.map_settings.get('parallel_route_offset', 25)  # Distance between parallel routes
                     total_width = (len(gates) - 1) * offset_distance
                     start_offset = -total_width / 2
                     
@@ -581,7 +690,7 @@ class MapRenderer:
                 # Check parallel paths for multi-gate routes
                 if len(gates) > 1:
                     # Check each parallel path
-                    offset_distance = 25
+                    offset_distance = self.map_settings.get('parallel_route_offset', 25)
                     total_width = (len(gates) - 1) * offset_distance
                     start_offset = -total_width / 2
                     
@@ -642,8 +751,8 @@ class MapRenderer:
             rgb = gate_config.get('rgb', [255, 255, 255])  # Default to white
             return tuple(rgb)
         else:
-            # Fallback to map_settings if colors.json not available
-            return tuple(self.map_settings.get('gate_colors', {}).get(gate, [255, 255, 255]))
+            # Default fallback color if colors.json not available
+            return (255, 255, 255)  # White
     
     def get_player_color(self, player_id: str, game_state) -> Optional[Tuple[int, int, int]]:
         """Get player color by player ID"""

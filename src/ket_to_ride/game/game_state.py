@@ -68,13 +68,13 @@ class GameState:
         except Exception as e:
             print(f"Error loading missions config: {e}")
             mission_cfg = {
-                "num_missions": 10,
+                "num_missions": 15,
                 "allow_double_target": True,
                 "allow_triple_target": True,
                 "points_per_step": 2,
                 "base_points": 5
             }
-        num_missions = mission_cfg.get("num_missions", 10)
+        num_missions = mission_cfg.get("num_missions", 15)
         allow_double = mission_cfg.get("allow_double_target", True)
         allow_triple = mission_cfg.get("allow_triple_target", True)
         points_per_step = mission_cfg.get("points_per_step", 2)
@@ -83,46 +83,130 @@ class GameState:
         cities = list(self.universities.keys())
         self.mission_deck = []
         attempts = 0
-        max_attempts = num_missions * 10
+        max_attempts = num_missions * 20  # Increased for quantum feasibility checking
         used_pairs = set()
-        state_choices = ["|0⟩", "|1⟩"]
+        
+        # Define quantum state pools for different complexities
+        single_qubit_states = {
+            'computational': ["|0⟩", "|1⟩"],
+            'superposition': ["|+⟩", "|-⟩"]
+        }
+        
+        two_qubit_states = {
+            'computational': ["|00⟩", "|01⟩", "|10⟩", "|11⟩"],
+            'entangled': ["|Bell+⟩", "|Bell-⟩", "|Ψ+⟩", "|Ψ-⟩"]
+        }
+        
+        three_qubit_states = {
+            'computational': ["|000⟩", "|001⟩", "|010⟩", "|011⟩", "|100⟩", "|101⟩", "|110⟩", "|111⟩"],
+            'multipartite': ["|GHZ⟩", "|W⟩"]
+        }
+        
         while len(self.mission_deck) < num_missions and attempts < max_attempts:
             attempts += 1
-            # Decide number of start cities
-            n_start = 1
-            if allow_triple and random.random() < 0.2:
-                n_start = 3
-            elif allow_double and random.random() < 0.3:
-                n_start = 2
+            
+            # Choose mission complexity (number of qubits)
+            complexity_weights = [0.6, 0.3, 0.1]  # 60% single, 30% double, 10% triple
+            num_qubits = random.choices([1, 2, 3], weights=complexity_weights)[0]
+            
+            # Ensure we allow the chosen complexity
+            if num_qubits == 2 and not allow_double:
+                num_qubits = 1
+            elif num_qubits == 3 and not allow_triple:
+                num_qubits = min(2 if allow_double else 1, num_qubits)
+            
+            # Number of start cities must match quantum complexity
+            n_start = num_qubits
+            
             # Pick unique start cities
+            if len(cities) < n_start + 1:  # Need at least n_start + 1 cities (for target)
+                continue
             start_cities = random.sample(cities, n_start)
+            
             # Pick a target city not in start_cities
             possible_targets = [c for c in cities if c not in start_cities]
             if not possible_targets:
                 continue
             target = random.choice(possible_targets)
+            
             # Avoid duplicate missions
-            key = (tuple(sorted(start_cities)), target)
+            key = (tuple(sorted(start_cities)), target, num_qubits)
             if key in used_pairs:
                 continue
-            # Find shortest path from any start to target
-            min_path_len = None
-            for start in start_cities:
-                path_len = self._shortest_path_length(start, target)
-                if path_len is not None:
-                    if min_path_len is None or path_len < min_path_len:
-                        min_path_len = path_len
-            if min_path_len is None:
-                continue  # No path exists
-            # Assign points
-            points = base_points + points_per_step * min_path_len
-            # Randomly pick initial and target quantum state
-            init_state = random.choice(state_choices)
-            target_state = random.choice(state_choices)
-            # Add mission
-            self.mission_deck.append(MissionCard(start_cities, target, init_state, target_state, points))
-            used_pairs.add(key)
+            
+            # Generate quantum states based on complexity
+            # Always start with |0⟩ state (|0⟩, |00⟩, |000⟩)
+            if num_qubits == 1:
+                init_state = "|0⟩"
+                # Choose state type for single qubit
+                use_superposition = random.random() < 0.4  # 40% chance for superposition
+                if use_superposition:
+                    target_state = random.choice(single_qubit_states['superposition'])
+                    difficulty = "medium"
+                else:
+                    target_state = random.choice(single_qubit_states['computational'])
+                    difficulty = "easy"
+            
+            elif num_qubits == 2:
+                init_state = "|00⟩"
+                # Choose state type for two qubits
+                use_entanglement = random.random() < 0.5  # 50% chance for entangled targets
+                if use_entanglement:
+                    target_state = random.choice(two_qubit_states['entangled'])
+                    difficulty = "hard"
+                else:
+                    target_state = random.choice(two_qubit_states['computational'])
+                    difficulty = "medium"
+            
+            else:  # num_qubits == 3
+                init_state = "|000⟩"
+                # Three qubit missions are always hard
+                use_multipartite = random.random() < 0.6  # 60% chance for multipartite states
+                if use_multipartite:
+                    target_state = random.choice(three_qubit_states['multipartite'])
+                else:
+                    target_state = random.choice(three_qubit_states['computational'])
+                difficulty = "hard"
+            
+            # Check if this quantum transformation is feasible with available routes
+            feasible_paths = self.quantum_simulator.check_route_feasibility(
+                start_cities, target, init_state, target_state, self.routes
+            )
+            
+            if not feasible_paths:
+                continue  # Skip missions that are impossible to complete
+            
+            # Pick a random feasible path to base the mission on
+            selected_path = random.choice(feasible_paths)
+            actual_start_city = selected_path['start_city']
+            path_length = len(selected_path['path'])
+            
+            # For multi-start missions, use only the start city that has a working path
+            if num_qubits > 1:
+                # Keep original behavior for now but use the validated start city
+                mission_start_cities = start_cities
+            else:
+                # For single qubit missions, use the specific working start city
+                mission_start_cities = [actual_start_city]
+            
+            # Assign points based on difficulty and actual working path length
+            difficulty_multiplier = {"easy": 1.0, "medium": 1.5, "hard": 2.0}
+            points = int((base_points + points_per_step * path_length) * difficulty_multiplier[difficulty])
+            
+            # Add mission with validated feasibility
+            try:
+                mission = MissionCard(mission_start_cities, target, init_state, target_state, points, difficulty)
+                self.mission_deck.append(mission)
+                used_pairs.add(key)
+                print(f"Generated feasible mission: {mission}")
+                print(f"  Working path: {actual_start_city} → {target} using gates {[gc[0] for gc in selected_path['gate_combination']]}")
+            except ValueError as e:
+                # Skip missions that fail validation
+                print(f"Skipped invalid mission: {e}")
+                continue
+        
         random.shuffle(self.mission_deck)
+        print(f"Generated {len(self.mission_deck)} feasible quantum missions")
 
     def _shortest_path_length(self, start: str, target: str) -> Optional[int]:
         # BFS for shortest path (by number of routes)

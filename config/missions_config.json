@@ -1,7 +1,18 @@
 {
-  "num_missions": 10,
+  "num_missions": 20,
   "allow_double_target": true,
   "allow_triple_target": true,
-  "points_per_step": 2,
-  "base_points": 5
-} 
+  "points_per_step": 3,
+  "base_points": 8,
+  "quantum_settings": {
+    "single_qubit_superposition_chance": 0.4,
+    "two_qubit_entanglement_chance": 0.5,
+    "three_qubit_multipartite_chance": 0.6,
+    "complexity_weights": [0.6, 0.3, 0.1],
+    "difficulty_multipliers": {
+      "easy": 1.0,
+      "medium": 1.5,
+      "hard": 2.0
+    }
+  }
+}
