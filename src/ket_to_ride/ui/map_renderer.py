@@ -147,8 +147,18 @@ class MapRenderer:
         length = route_data['length']
         claimed_by = route_data.get('claimed_by')
         
+        # Extract the specific claimed player for the current gate
+        actual_claimed_by = None
+        if claimed_by:
+            if isinstance(claimed_by, dict):
+                # New format: check if current gate is claimed
+                actual_claimed_by = claimed_by.get(display_gate)
+            else:
+                # Old format: route is claimed by this player
+                actual_claimed_by = claimed_by
+        
         # Get route color based on claim status
-        if claimed_by and player_color:
+        if actual_claimed_by and player_color:
             color = player_color  # Use player's color for claimed routes
         elif highlighted:
             color = (255, 255, 0)   # Yellow for highlighted routes
@@ -175,7 +185,7 @@ class MapRenderer:
                 end_pos = (int(end_pos[0] + perp_x), int(end_pos[1] + perp_y))
         
         # Draw route as individual train car segments (like Ticket to Ride)
-        self.draw_route_segments(surface, start_pos, end_pos, length, color, display_gate, claimed_by, player_color)
+        self.draw_route_segments(surface, start_pos, end_pos, length, color, display_gate, actual_claimed_by, player_color)
         
     def draw_route_segments(self, surface: pygame.Surface, start_pos: Tuple[int, int], 
                            end_pos: Tuple[int, int], length: int, color: Tuple[int, int, int], gate: str, 
@@ -223,15 +233,92 @@ class MapRenderer:
             segment_end_y = current_y + unit_y * segment_length
             
             # Draw train car as rounded rectangle
-            # Show label only on first segment, but ownership circles on all segments
+            # Don't draw labels on individual segments - we'll draw it centered later
             self.draw_train_car(surface, 
                               (segment_start_x, segment_start_y), 
                               (segment_end_x, segment_end_y), 
-                              segment_width, color, gate, i == 0, claimed_by, player_color)
+                              segment_width, color, gate, False, claimed_by, player_color)
             
             # Move to next segment position (including spacing)
             current_x += unit_x * (segment_length + segment_spacing)
             current_y += unit_y * (segment_length + segment_spacing)
+        
+        # Draw gate label at the true center of the entire route FIRST (before squares)
+        if self.font:
+            route_center_x = (start_pos[0] + end_pos[0]) / 2
+            route_center_y = (start_pos[1] + end_pos[1]) / 2
+            
+            # Use white text for better visibility on routes
+            gate_text = self.font.render(gate, True, (255, 255, 255))
+            text_rect = gate_text.get_rect(center=(int(route_center_x), int(route_center_y)))
+            
+            # Draw text directly without background for cleaner look
+            surface.blit(gate_text, text_rect)
+        
+        # Now draw all the player ownership squares AFTER the text so they're on top
+        if claimed_by and player_color:
+            # Redraw squares on top of everything using same positioning logic
+            dx = end_pos[0] - start_pos[0]
+            dy = end_pos[1] - start_pos[1]
+            route_length = math.sqrt(dx*dx + dy*dy)
+            
+            if route_length == 0 or length == 0:
+                return
+                
+            # Unit vector along the route
+            unit_x = dx / route_length
+            unit_y = dy / route_length
+            
+            current_x = start_pos[0]
+            current_y = start_pos[1]
+            
+            # Calculate same segment positioning as above
+            segment_spacing = 3
+            total_spacing = (length - 1) * segment_spacing
+            available_length = route_length - total_spacing
+            segment_length = available_length / length
+            
+            if segment_length < 8:
+                segment_length = 8
+                segment_spacing = max(1, (route_length - length * segment_length) / max(1, length - 1))
+            
+            # Draw a square on each segment center
+            for i in range(length):
+                segment_start_x = current_x
+                segment_start_y = current_y
+                segment_end_x = current_x + unit_x * segment_length
+                segment_end_y = current_y + unit_y * segment_length
+                
+                # Draw the square at this segment's center
+                square_center_x = int((segment_start_x + segment_end_x) / 2)
+                square_center_y = int((segment_start_y + segment_end_y) / 2)
+                
+                # Square size for gameplay (smaller than debug size)
+                square_size = 12
+                square_rect = pygame.Rect(
+                    square_center_x - square_size // 2,
+                    square_center_y - square_size // 2,
+                    square_size,
+                    square_size
+                )
+                
+                # Draw visible border
+                border_size = 2
+                border_rect = pygame.Rect(
+                    square_center_x - square_size // 2 - border_size,
+                    square_center_y - square_size // 2 - border_size,
+                    square_size + 2 * border_size,
+                    square_size + 2 * border_size
+                )
+                
+                # Use player color with borders for visibility
+                pygame.draw.rect(surface, (255, 255, 255), border_rect)  # White border
+                pygame.draw.rect(surface, player_color, square_rect)      # Player color
+                pygame.draw.rect(surface, (0, 0, 0), square_rect, 1)     # Black inner border
+                
+                # Move to next segment position
+                current_x += unit_x * (segment_length + segment_spacing)
+                current_y += unit_y * (segment_length + segment_spacing)
     
     def draw_train_car(self, surface: pygame.Surface, start_pos: Tuple[float, float], 
                        end_pos: Tuple[float, float], width: float, color: Tuple[int, int, int], 
@@ -302,32 +389,19 @@ class MapRenderer:
             pygame.draw.polygon(surface, color, corners)
             pygame.draw.polygon(surface, (255, 255, 255), corners, 2)
         
-        # Draw gate label on first segment
+        # Note: Player ownership squares are now drawn at the route level for proper layering
+        
+        # Draw gate label on first segment AFTER the square (so text doesn't cover it)
         if show_label and self.font:
             label_center_x = (start_pos[0] + end_pos[0]) / 2
             label_center_y = (start_pos[1] + end_pos[1]) / 2
             
-            # Use larger font for better visibility
-            gate_text = self.font.render(gate, True, (0, 0, 0))
+            # Use white text for better visibility on routes
+            gate_text = self.font.render(gate, True, (255, 255, 255))
             text_rect = gate_text.get_rect(center=(int(label_center_x), int(label_center_y)))
             
-            # Draw background for better readability
-            bg_rect = text_rect.inflate(4, 2)
-            pygame.draw.rect(surface, (255, 255, 255, 200), bg_rect)
-            
+            # Draw text directly without background for cleaner look
             surface.blit(gate_text, text_rect)
-        
-        # Draw player ownership circle if route is claimed (ALWAYS on top)
-        if claimed_by and player_color:
-            circle_center_x = int((start_pos[0] + end_pos[0]) / 2)
-            circle_center_y = int((start_pos[1] + end_pos[1]) / 2)
-            
-            # Draw player color circle with border - make it larger and more visible
-            circle_radius = 12
-            # Draw outer white border first for better visibility
-            pygame.draw.circle(surface, (255, 255, 255), (circle_center_x, circle_center_y), circle_radius + 2)
-            pygame.draw.circle(surface, player_color, (circle_center_x, circle_center_y), circle_radius)
-            pygame.draw.circle(surface, (0, 0, 0), (circle_center_x, circle_center_y), circle_radius, 2)
     
     def draw_university(self, surface: pygame.Surface, position: Tuple[int, int], 
                        uni_data: Dict, uni_id: str):
@@ -382,8 +456,11 @@ class MapRenderer:
         # Get scaled positions
         scaled_positions = self.scale_positions(map_rect)
         
+        # Use routes from game_state if available, otherwise use loaded routes
+        routes_to_draw = game_state.routes if game_state else self.routes
+        
         # Draw routes first (so they appear behind universities)
-        for i, route in enumerate(self.routes):
+        for i, route in enumerate(routes_to_draw):
             from_uni = route['from']
             to_uni = route['to']
             
@@ -394,8 +471,17 @@ class MapRenderer:
                 highlighted = (highlighted_route_idx == i)
                 # Get player color if route is claimed
                 player_color = None
-                if route.get('claimed_by'):
-                    player_color = self.get_player_color(route['claimed_by'], game_state)
+                claimed_by = route.get('claimed_by')
+                if claimed_by:
+                    if isinstance(claimed_by, dict):
+                        # New format: check if any gate is claimed
+                        for gate_claimed_by in claimed_by.values():
+                            if gate_claimed_by:
+                                player_color = self.get_player_color(gate_claimed_by, game_state)
+                                break
+                    else:
+                        # Old format: route is claimed by this player
+                        player_color = self.get_player_color(claimed_by, game_state)
                 
                 # Handle both array and single gate formats for visual display
                 gates = route['gate']
@@ -403,8 +489,8 @@ class MapRenderer:
                     gates = [gates]  # Convert single gate to array
                 
                 # If route has multiple gates, draw them as parallel paths
-                if len(gates) > 1 and not route.get('claimed_by'):
-                    # Draw multiple parallel paths for unclaimed multi-gate routes
+                if len(gates) > 1:
+                    # Draw multiple parallel paths, showing individual claim status
                     offset_distance = 25  # Distance between parallel routes
                     total_width = (len(gates) - 1) * offset_distance
                     start_offset = -total_width / 2
@@ -414,9 +500,22 @@ class MapRenderer:
                         # Create a temporary route dict for each gate
                         temp_route = route.copy()
                         temp_route['gate'] = gate  # Single gate for this path
-                        self.draw_route(surface, start_pos, end_pos, temp_route, int(offset), highlighted, player_color)
+                        
+                        # Check individual gate claim status
+                        claimed_by = route.get('claimed_by', {})
+                        if isinstance(claimed_by, dict):
+                            temp_route['claimed_by'] = claimed_by.get(gate)
+                        else:
+                            temp_route['claimed_by'] = claimed_by
+                        
+                        # Get player color for this specific gate
+                        gate_player_color = None
+                        if temp_route['claimed_by']:
+                            gate_player_color = self.get_player_color(temp_route['claimed_by'], game_state)
+                        
+                        self.draw_route(surface, start_pos, end_pos, temp_route, int(offset), highlighted, gate_player_color)
                 else:
-                    # Single path for claimed routes or single-gate routes
+                    # Single path for single-gate routes
                     self.draw_route(surface, start_pos, end_pos, route, 0, highlighted, player_color)
         
         # Draw universities on top of routes
@@ -451,8 +550,8 @@ class MapRenderer:
         return None
     
     def get_route_at_position(self, map_rect: pygame.Rect, 
-                             mouse_pos: Tuple[int, int]) -> Optional[int]:
-        """Find which route (if any) is clicked by the mouse"""
+                             mouse_pos: Tuple[int, int], game_state=None) -> Optional[Tuple[int, str]]:
+        """Find which route and gate (if any) is clicked by the mouse. Returns (route_index, gate) or None"""
         if not self.universities:
             return None
             
@@ -462,8 +561,11 @@ class MapRenderer:
         # Use absolute mouse position (don't convert to relative)
         absolute_pos = mouse_pos
         
+        # Use routes from game_state if available, otherwise use loaded routes
+        routes_to_check = game_state.routes if game_state else self.routes
+        
         # Check each route, considering parallel paths for multi-gate routes
-        for i, route in enumerate(self.routes):
+        for i, route in enumerate(routes_to_check):
             from_uni = route['from']
             to_uni = route['to']
             
@@ -476,8 +578,8 @@ class MapRenderer:
                 if isinstance(gates, str):
                     gates = [gates]
                 
-                # Check if route has multiple gates and is unclaimed (parallel paths)
-                if len(gates) > 1 and not route.get('claimed_by'):
+                # Check parallel paths for multi-gate routes
+                if len(gates) > 1:
                     # Check each parallel path
                     offset_distance = 25
                     total_width = (len(gates) - 1) * offset_distance
@@ -498,12 +600,12 @@ class MapRenderer:
                             
                             distance = self._point_to_line_distance(absolute_pos, offset_start, offset_end)
                             if distance <= click_tolerance:
-                                return i
+                                return (i, gate)
                 else:
                     # Single path check
                     distance = self._point_to_line_distance(absolute_pos, start_pos, end_pos)
                     if distance <= click_tolerance:
-                        return i
+                        return (i, gates[0])
         
         return None
     
@@ -543,10 +645,10 @@ class MapRenderer:
             # Fallback to map_settings if colors.json not available
             return tuple(self.map_settings.get('gate_colors', {}).get(gate, [255, 255, 255]))
     
-    def get_player_color(self, player_name: str, game_state) -> Optional[Tuple[int, int, int]]:
-        """Get player color by player name"""
+    def get_player_color(self, player_id: str, game_state) -> Optional[Tuple[int, int, int]]:
+        """Get player color by player ID"""
         if game_state and hasattr(game_state, 'players'):
             for player in game_state.players:
-                if player.name == player_name:
+                if player.player_id == player_id:
                     return player.color
         return None

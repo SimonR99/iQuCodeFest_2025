@@ -118,20 +118,58 @@ class SidebarPanel(BasePanel):
             if isinstance(gates, str):
                 gates = [gates]
             
-            # Check if route is already claimed
-            if route.get('claimed_by'):
-                claimed_gate = route.get('claimed_with_gate', gates[0])
-                gate_display = f"{claimed_gate} (CLAIMED)"
-                cards_info = "Route already claimed"
-            else:
+            # Check claimed status with new format
+            claimed_by = route.get('claimed_by', {})
+            if isinstance(claimed_by, dict):
+                # New format: check individual gate claims
+                claimed_gates = []
+                unclaimed_gates = []
+                
+                for gate in gates:
+                    if claimed_by.get(gate) is not None:
+                        claimed_gates.append(gate)
+                    else:
+                        unclaimed_gates.append(gate)
+                
                 if len(gates) == 1:
-                    gate_display = f"{gates[0]} (×{route['length']})"
-                    cards_info = f"You have: {current_player.hand.get(gates[0], 0)}"
+                    # Single gate route
+                    if claimed_gates:
+                        gate_display = f"{gates[0]} (CLAIMED by {claimed_by[gates[0]]})"
+                        cards_info = "Gate already claimed"
+                    else:
+                        gate_display = f"{gates[0]} (×{route['length']})"
+                        cards_info = f"You have: {current_player.hand.get(gates[0], 0)}"
                 else:
-                    gate_display = f"Options: {'/'.join(gates)} (×{route['length']})"
-                    # Show cards for all gate options
-                    card_counts = [f"{gate}: {current_player.hand.get(gate, 0)}" for gate in gates]
-                    cards_info = f"You have: {', '.join(card_counts)}"
+                    # Multi-gate route
+                    if unclaimed_gates:
+                        if claimed_gates:
+                            # Some gates claimed, some not
+                            gate_display = f"Available: {'/'.join(unclaimed_gates)} (×{route['length']})"
+                            gate_display += f" | Claimed: {'/'.join(claimed_gates)}"
+                        else:
+                            # No gates claimed yet
+                            gate_display = f"Options: {'/'.join(unclaimed_gates)} (×{route['length']})"
+                        
+                        # Show cards for unclaimed gate options
+                        card_counts = [f"{gate}: {current_player.hand.get(gate, 0)}" for gate in unclaimed_gates]
+                        cards_info = f"You have: {', '.join(card_counts)}"
+                    else:
+                        # All gates claimed
+                        gate_display = f"All claimed: {'/'.join(claimed_gates)}"
+                        cards_info = "All gates on this route are claimed"
+            else:
+                # Old format compatibility
+                if claimed_by is not None:
+                    gate_display = f"{gates[0]} (CLAIMED by {claimed_by})"
+                    cards_info = "Route already claimed"
+                else:
+                    if len(gates) == 1:
+                        gate_display = f"{gates[0]} (×{route['length']})"
+                        cards_info = f"You have: {current_player.hand.get(gates[0], 0)}"
+                    else:
+                        gate_display = f"Options: {'/'.join(gates)} (×{route['length']})"
+                        card_counts = [f"{gate}: {current_player.hand.get(gate, 0)}" for gate in gates]
+                        cards_info = f"You have: {', '.join(card_counts)}"
             
             route_info = [
                 f"{route['from']} → {route['to']}",
