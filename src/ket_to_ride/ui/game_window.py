@@ -1,9 +1,10 @@
 import pygame
 import sys
 import os
-from typing import Optional, Tuple, List
+import json
+from typing import Optional, Tuple
 from .map_renderer import MapRenderer
-from ..game import GameState, Player, GateType
+from ..game import GameState, GateType
 
 class GameWindow:
     def __init__(self, width: int = 1400, height: int = 900):
@@ -28,17 +29,23 @@ class GameWindow:
         # Available cards for drawing (like Ticket to Ride online)
         self.available_cards = []
         
+        # Background image
+        self.background_image = None
+        self.load_background_image()
+        
         # Card drawing state
         self.cards_drawn_this_turn = 0
         self.max_cards_per_turn = 2
         
-        # Colors
-        self.BACKGROUND_COLOR = (30, 30, 40)
-        self.MAP_COLOR = (50, 50, 60)
-        self.CARD_AREA_COLOR = (40, 40, 50)
-        self.INFO_PANEL_COLOR = (35, 35, 45)
-        self.BORDER_COLOR = (100, 100, 120)
-        self.TEXT_COLOR = (255, 255, 255)
+        # Load colors from configuration
+        self.colors = self.load_colors()
+        self.BACKGROUND_COLOR = tuple(self.colors['ui_colors']['background']['rgb'])
+        self.MAP_COLOR = tuple(self.colors['ui_colors']['map_area']['rgb'])  
+        self.CARD_AREA_COLOR = tuple(self.colors['ui_colors']['card_area']['rgb'])
+        self.INFO_PANEL_COLOR = tuple(self.colors['ui_colors']['info_panel']['rgb'])
+        self.BORDER_COLOR = tuple(self.colors['ui_colors']['border']['rgb'])
+        self.TEXT_COLOR = tuple(self.colors['ui_colors']['text']['rgb'])
+        self.ACCENT_COLOR = tuple(self.colors['ui_colors']['accent']['rgb'])
         
         # UI Layout - will be updated dynamically
         self.update_layout()
@@ -51,14 +58,14 @@ class GameWindow:
         # Right panel for available cards (like real Ticket to Ride)
         right_panel_width = 200
         
-        # Bottom area for player hand
-        hand_area_height = 120
+        # Bottom area for player hand (increased size)
+        hand_area_height = 160
         
         # Calculate main map area
         map_x = sidebar_width + 10
         map_y = 10
         map_width = self.width - sidebar_width - right_panel_width - 30
-        map_height = self.height - hand_area_height - 20
+        map_height = self.height - hand_area_height - 30
         
         # Define all UI rectangles
         self.sidebar_rect = pygame.Rect(10, 10, sidebar_width, self.height - 20)
@@ -68,7 +75,7 @@ class GameWindow:
         right_panel_x = map_x + map_width + 10
         self.available_cards_rect = pygame.Rect(right_panel_x, 10, right_panel_width, self.height - 20)
         
-        # Bottom area for player hand
+        # Bottom area for player hand (aligned with map)
         hand_y = map_y + map_height + 10
         self.hand_area_rect = pygame.Rect(map_x, hand_y, map_width, hand_area_height)
         
@@ -91,6 +98,50 @@ class GameWindow:
         self.setup_available_cards()
         
         return True
+        
+    def load_background_image(self):
+        """Load the map background image"""
+        try:
+            # Try to load the map image
+            image_path = os.path.join("assets", "map.jpg")
+            if os.path.exists(image_path):
+                self.background_image = pygame.image.load(image_path)
+                print(f"Loaded background image: {image_path}")
+            else:
+                print(f"Background image not found: {image_path}")
+                self.background_image = None
+        except Exception as e:
+            print(f"Error loading background image: {e}")
+            self.background_image = None
+    
+    def load_colors(self):
+        """Load colors from configuration file"""
+        try:
+            config_path = os.path.join(os.path.dirname(__file__), '../../..', 'config', 'colors.json')
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading colors: {e}")
+            # Fallback colors
+            return {
+                'gate_colors': {
+                    'I': {'rgb': [240, 235, 220]},
+                    'X': {'rgb': [200, 120, 100]},
+                    'Y': {'rgb': [140, 160, 120]},
+                    'Z': {'rgb': [120, 140, 160]},
+                    'H': {'rgb': [190, 170, 130]},
+                    'CNOT': {'rgb': [160, 120, 140]}
+                },
+                'ui_colors': {
+                    'background': {'rgb': [45, 52, 48]},
+                    'map_area': {'rgb': [85, 95, 82]},
+                    'card_area': {'rgb': [68, 75, 65]},
+                    'info_panel': {'rgb': [58, 65, 55]},
+                    'border': {'rgb': [120, 110, 95]},
+                    'text': {'rgb': [250, 248, 240]},
+                    'accent': {'rgb': [160, 140, 110]}
+                }
+            }
         
     def setup_game(self):
         # Add default players
@@ -323,6 +374,25 @@ class GameWindow:
             print(f"Cannot claim route! Need {route['length']} {route['gate']} cards")
     
     def draw_map_area(self) -> None:
+        # Draw background image in map area if available
+        if self.background_image:
+            # Scale and crop background image to fit map area
+            scaled_bg = pygame.transform.scale(self.background_image, 
+                                             (self.map_rect.width, self.map_rect.height))
+            self.screen.blit(scaled_bg, self.map_rect.topleft)
+            
+            # Add subtle overlay to make routes visible
+            overlay = pygame.Surface((self.map_rect.width, self.map_rect.height))
+            overlay.set_alpha(60)  # Light overlay
+            overlay.fill(self.MAP_COLOR)
+            self.screen.blit(overlay, self.map_rect.topleft)
+        else:
+            # Fallback to solid color
+            pygame.draw.rect(self.screen, self.MAP_COLOR, self.map_rect)
+        
+        # Draw border
+        pygame.draw.rect(self.screen, self.BORDER_COLOR, self.map_rect, 3)
+        
         # Use map renderer to draw the university map with highlighting
         # Show selected route or hovered route
         highlight_route = self.selected_route_idx if self.selected_route_idx is not None else self.hovered_route_idx
@@ -331,11 +401,17 @@ class GameWindow:
     def draw_available_cards(self) -> None:
         # Draw available cards area (right panel like Ticket to Ride)
         pygame.draw.rect(self.screen, self.CARD_AREA_COLOR, self.available_cards_rect)
-        pygame.draw.rect(self.screen, self.BORDER_COLOR, self.available_cards_rect, 2)
+        pygame.draw.rect(self.screen, self.BORDER_COLOR, self.available_cards_rect, 3)
         
-        # Draw title
-        title_text = self.large_font.render("Available Cards", True, self.TEXT_COLOR)
-        self.screen.blit(title_text, (self.available_cards_rect.x + 10, self.available_cards_rect.y + 10))
+        # Add header accent
+        header_rect = pygame.Rect(self.available_cards_rect.x + 3, self.available_cards_rect.y + 3,
+                                 self.available_cards_rect.width - 6, 40)
+        pygame.draw.rect(self.screen, self.ACCENT_COLOR, header_rect)
+        
+        # Draw title (centered and properly sized)
+        title_text = self.font.render("Available Cards", True, self.TEXT_COLOR)
+        title_rect = title_text.get_rect(center=(header_rect.centerx, header_rect.centery - 5))
+        self.screen.blit(title_text, title_rect)
         
         # Draw card drawing info
         current_player = self.game_state.get_current_player()
@@ -350,12 +426,12 @@ class GameWindow:
         card_spacing = 10
         
         gate_colors = {
-            GateType.I: (255, 255, 255),
-            GateType.X: (255, 100, 100),
-            GateType.Y: (100, 255, 100),
-            GateType.Z: (100, 100, 255),
-            GateType.H: (255, 255, 100),
-            GateType.CNOT: (255, 100, 255),
+            GateType.I: tuple(self.colors['gate_colors']['I']['rgb']),
+            GateType.X: tuple(self.colors['gate_colors']['X']['rgb']),
+            GateType.Y: tuple(self.colors['gate_colors']['Y']['rgb']),
+            GateType.Z: tuple(self.colors['gate_colors']['Z']['rgb']),
+            GateType.H: tuple(self.colors['gate_colors']['H']['rgb']),
+            GateType.CNOT: tuple(self.colors['gate_colors']['CNOT']['rgb']),
             "DECK": (100, 100, 100)
         }
         
@@ -404,31 +480,37 @@ class GameWindow:
     def draw_hand_area(self) -> None:
         # Draw player hand area
         pygame.draw.rect(self.screen, self.CARD_AREA_COLOR, self.hand_area_rect)
-        pygame.draw.rect(self.screen, self.BORDER_COLOR, self.hand_area_rect, 2)
+        pygame.draw.rect(self.screen, self.BORDER_COLOR, self.hand_area_rect, 3)
+        
+        # Add header accent
+        header_rect = pygame.Rect(self.hand_area_rect.x + 3, self.hand_area_rect.y + 3,
+                                 self.hand_area_rect.width - 6, 35)
+        pygame.draw.rect(self.screen, self.ACCENT_COLOR, header_rect)
         
         current_player = self.game_state.get_current_player()
         if not current_player:
             return
             
-        # Draw title
+        # Draw title (centered and properly sized)
         title = f"{current_player.name}'s Hand"
-        title_text = self.large_font.render(title, True, self.TEXT_COLOR)
-        self.screen.blit(title_text, (self.hand_area_rect.x + 20, self.hand_area_rect.y + 5))
+        title_text = self.font.render(title, True, self.TEXT_COLOR)
+        title_rect = title_text.get_rect(center=(header_rect.centerx, header_rect.centery))
+        self.screen.blit(title_text, title_rect)
         
-        # Draw gate cards as colored rectangles
-        card_width = 70
-        card_height = 45
-        card_spacing = 8
+        # Draw gate cards as colored rectangles (improved layout)
+        card_width = 90
+        card_height = 60
+        card_spacing = 12
         start_x = self.hand_area_rect.x + 20
-        start_y = self.hand_area_rect.y + 30
+        start_y = self.hand_area_rect.y + 50
         
         gate_colors = {
-            GateType.I: (255, 255, 255),
-            GateType.X: (255, 100, 100),
-            GateType.Y: (100, 255, 100),
-            GateType.Z: (100, 100, 255),
-            GateType.H: (255, 255, 100),
-            GateType.CNOT: (255, 100, 255)
+            GateType.I: tuple(self.colors['gate_colors']['I']['rgb']),
+            GateType.X: tuple(self.colors['gate_colors']['X']['rgb']),
+            GateType.Y: tuple(self.colors['gate_colors']['Y']['rgb']),
+            GateType.Z: tuple(self.colors['gate_colors']['Z']['rgb']),
+            GateType.H: tuple(self.colors['gate_colors']['H']['rgb']),
+            GateType.CNOT: tuple(self.colors['gate_colors']['CNOT']['rgb'])
         }
         
         x_offset = 0
@@ -437,9 +519,13 @@ class GameWindow:
                 color = gate_colors.get(gate_type, (150, 150, 150))
                 card_rect = pygame.Rect(start_x + x_offset, start_y, card_width, card_height)
                 
+                # Draw card shadow
+                shadow_rect = pygame.Rect(card_rect.x + 2, card_rect.y + 2, card_rect.width, card_rect.height)
+                pygame.draw.rect(self.screen, (0, 0, 0, 80), shadow_rect)
+                
                 # Draw card background
                 pygame.draw.rect(self.screen, color, card_rect)
-                pygame.draw.rect(self.screen, (255, 255, 255), card_rect, 2)
+                pygame.draw.rect(self.screen, (255, 255, 255), card_rect, 3)
                 
                 # Draw gate type and count
                 gate_text = self.font.render(gate_type.value, True, (0, 0, 0))
@@ -456,11 +542,16 @@ class GameWindow:
     def draw_sidebar(self) -> None:
         # Draw left sidebar with player info and game status
         pygame.draw.rect(self.screen, self.INFO_PANEL_COLOR, self.sidebar_rect)
-        pygame.draw.rect(self.screen, self.BORDER_COLOR, self.sidebar_rect, 2)
+        pygame.draw.rect(self.screen, self.BORDER_COLOR, self.sidebar_rect, 3)
         
-        # Draw title
-        title_text = self.title_font.render("Ket-to-Ride", True, self.TEXT_COLOR)
-        title_rect = title_text.get_rect(centerx=self.sidebar_rect.centerx, y=self.sidebar_rect.y + 20)
+        # Add title background
+        title_rect_bg = pygame.Rect(self.sidebar_rect.x + 3, self.sidebar_rect.y + 3, 
+                                   self.sidebar_rect.width - 6, 50)
+        pygame.draw.rect(self.screen, self.ACCENT_COLOR, title_rect_bg)
+        
+        # Draw title (centered and properly sized)
+        title_text = self.large_font.render("|ket> to ride", True, self.TEXT_COLOR)
+        title_rect = title_text.get_rect(center=(title_rect_bg.centerx, title_rect_bg.centery))
         self.screen.blit(title_text, title_rect)
         
         current_player = self.game_state.get_current_player()
@@ -540,14 +631,14 @@ class GameWindow:
                 f"Need: {route['length']} {route['gate']} cards",
             ])
         
-        y_offset = 80
+        y_offset = 65
         for line in info_lines:
             if line:
                 # Color current player name differently
                 color = current_player.color if line.startswith("➤") else self.TEXT_COLOR
-                text = self.small_font.render(line, True, color)
+                text = self.font.render(line, True, color)
                 self.screen.blit(text, (self.sidebar_rect.x + 15, self.sidebar_rect.y + y_offset))
-            y_offset += 18
+            y_offset += 22
     
     def draw(self) -> None:
         self.screen.fill(self.BACKGROUND_COLOR)

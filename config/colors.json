@@ -1,0 +1,71 @@
+{
+  "gate_colors": {
+    "I": {
+      "rgb": [240, 235, 220],
+      "hex": "#F0EBDC",
+      "name": "Cream White"
+    },
+    "X": {
+      "rgb": [200, 120, 100],
+      "hex": "#C87864",
+      "name": "Terracotta Red"
+    },
+    "Y": {
+      "rgb": [140, 160, 120],
+      "hex": "#8CA078",
+      "name": "Sage Green"
+    },
+    "Z": {
+      "rgb": [120, 140, 160],
+      "hex": "#788CA0",
+      "name": "Slate Blue"
+    },
+    "H": {
+      "rgb": [190, 170, 130],
+      "hex": "#BEAA82",
+      "name": "Sandy Brown"
+    },
+    "CNOT": {
+      "rgb": [160, 120, 140],
+      "hex": "#A0788C",
+      "name": "Mauve Purple"
+    }
+  },
+  "ui_colors": {
+    "background": {
+      "rgb": [45, 52, 48],
+      "hex": "#2D3430",
+      "name": "Dark Forest Green"
+    },
+    "map_area": {
+      "rgb": [85, 95, 82],
+      "hex": "#555F52",
+      "name": "Muted Sage Green"
+    },
+    "card_area": {
+      "rgb": [68, 75, 65],
+      "hex": "#444B41",
+      "name": "Darker Sage"
+    },
+    "info_panel": {
+      "rgb": [58, 65, 55],
+      "hex": "#3A4137",
+      "name": "Forest Green"
+    },
+    "border": {
+      "rgb": [120, 110, 95],
+      "hex": "#786E5F",
+      "name": "Warm Brown"
+    },
+    "text": {
+      "rgb": [250, 248, 240],
+      "hex": "#FAF8F0",
+      "name": "Warm White"
+    },
+    "accent": {
+      "rgb": [160, 140, 110],
+      "hex": "#A08C6E",
+      "name": "Sandy Brown"
+    }
+  }
+}

@@ -211,10 +211,7 @@ class MapRenderer:
         if not self.font:
             self.initialize_font()
             
-        # Clear map area
-        bg_color = self.map_settings.get('background_color', [30, 40, 50])
-        pygame.draw.rect(surface, bg_color, map_rect)
-        pygame.draw.rect(surface, (100, 100, 120), map_rect, 2)
+        # Note: Background is now handled by the game window
         
         if not self.universities:
             # Draw placeholder text if no universities loaded
