@@ -56,9 +56,10 @@ class Player:
         return f"Player {self.name} (Cards: {self.get_total_cards()}, Routes: {len(self.claimed_routes)})"
 
 class MissionCard:
-    def __init__(self, start_city: str, target_city: str, 
+    def __init__(self, start_cities: List[str], target_city: str, 
                  initial_state: str, target_state: str, points: int = 10):
-        self.start_city = start_city
+        # Support 1-3 start cities (like Ticket to Ride)
+        self.start_cities = start_cities if isinstance(start_cities, list) else [start_cities]
         self.target_city = target_city
         self.initial_state = initial_state  # "|0⟩" or "|1⟩"
         self.target_state = target_state    # "|0⟩" or "|1⟩"
@@ -66,4 +67,5 @@ class MissionCard:
         self.completed = False
         
     def __str__(self):
-        return f"{self.start_city} {self.initial_state} → {self.target_city} {self.target_state} ({self.points}pts)"
+        start_str = " OR ".join(self.start_cities)
+        return f"({start_str}) {self.initial_state} → {self.target_city} {self.target_state} ({self.points}pts)"

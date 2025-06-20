@@ -32,22 +32,15 @@
       "rgb": [190, 170, 130],
       "hex": "#BEAA82",
       "name": "Sandy Brown",
-      "image_path": "assets/cards/H_gate.png",
+      "image_path": null,
       "border_color": [190, 170, 130]
     },
     "CNOT": {
       "rgb": [160, 120, 140],
       "hex": "#A0788C",
       "name": "Mauve Purple",
-      "image_path": "assets/cards/CNOT_gate.png",
+      "image_path": null,
       "border_color": [160, 120, 140]
-    },
-    "DECK": {
-      "rgb": [80, 90, 75],
-      "hex": "#505A4B",
-      "name": "Dark Forest",
-      "image_path": "assets/cards/deck_back.png",
-      "border_color": [120, 110, 95]
     }
   },
   "ui_colors": {
@@ -85,32 +78,6 @@
       "rgb": [160, 140, 110],
       "hex": "#A08C6E",
       "name": "Sandy Brown"
-    }
-  },
-  "rail_images": {
-    "I": {
-      "image_path": "assets/rails/I_rail.png",
-      "fallback_color": [240, 235, 220]
-    },
-    "X": {
-      "image_path": "assets/rails/X_rail.png",
-      "fallback_color": [200, 120, 100]
-    },
-    "Y": {
-      "image_path": "assets/rails/Y_rail.png",
-      "fallback_color": [140, 160, 120]
-    },
-    "Z": {
-      "image_path": "assets/rails/Z_rail.png",
-      "fallback_color": [120, 140, 160]
-    },
-    "H": {
-      "image_path": "assets/rails/H_rail.png",
-      "fallback_color": [190, 170, 130]
-    },
-    "CNOT": {
-      "image_path": "assets/rails/CNOT_rail.png",
-      "fallback_color": [160, 120, 140]
     }
   }
 }

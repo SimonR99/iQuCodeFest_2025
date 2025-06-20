@@ -22,28 +22,66 @@ The game window will display:
 
 ## Controls
 
+### Getting Started
+1. **Run the game**: `python main.py`
+2. **Main menu**: Choose "Local Game" to start playing
+3. **Online/Settings**: Coming soon features
+
+### Mouse Controls (Primary)
+- **Click available cards (right panel)**: Draw specific gate cards or from deck
+- **Click routes on map**: Select routes for claiming
+- **Click selected route again**: Claim the route (if you have enough cards)
+- **Hover over routes**: Highlight routes for easier selection
+
+### Game Rules (Like Ticket to Ride)
+- **Each turn**: Draw up to 2 cards OR claim 1 route
+- **Card drawing**: Take visible cards from right panel or draw from deck
+- **Route claiming**: Must have exact number of matching gate cards
+- **Winning**: Complete your quantum mission by building a circuit path
+
+### Keyboard Controls
 - **ESC**: Exit game
-- **Mouse**: Interact with UI elements (future implementation)
+- **SPACE**: End turn and pass to next player
+- **D**: Draw 2 random cards (alternative to clicking cards)
+- **R**: Cycle through routes (alternative to mouse selection)
+- **C**: Claim selected route (alternative to clicking)
 
-## Development Todo List
+## Current Implementation Status
 
-### High Priority
-- [ ] Implement university map with quantum gate routes
-- [ ] Create gate card system (I, X, Y, Z, H, CNOT)
-- [ ] Add player hand management
-- [ ] Implement route claiming mechanics
+### ✅ Completed Features
+- [x] **Authentic Ticket to Ride Layout** - Exact match to online version
+- [x] **Right-side card panel** - Vertical card selection like real game
+- [x] **Proper card drawing rules** - Draw 2 cards OR claim 1 route per turn
+- [x] **Perfect train car segments** - Segments cover entire route distance with consistent count
+- [x] **Large, readable fonts** - Improved text size throughout the interface
+- [x] **Main menu system** - Professional menu with Local/Online/Settings options
+- [x] **Enhanced visual design** - Better colors, shadows, and panel styling
+- [x] **Improved hand panel** - Larger size and better card layout
+- [x] **Turn-based mechanics** - Proper Ticket to Ride game flow
+- [x] **Mouse-based controls** - Click to select routes and draw cards
+- [x] **Route hover effects** - Routes highlight on mouse hover
+- [x] **Interactive route claiming** - Click routes to select and claim
+- [x] University map with quantum gate routes
+- [x] Gate card system (I, X, Y, Z, H, CNOT) with color coding
+- [x] Player hand management and card display
+- [x] Mission card system with quantum state goals
+- [x] Quantum circuit simulation using numpy
+- [x] Real-time game state display
+- [x] Win condition checking via quantum simulation
 
-### Medium Priority  
-- [ ] Add mission card system
-- [ ] Implement quantum circuit simulation
-- [ ] Create turn-based game flow
-- [ ] Add multiplayer support
+### 🚧 In Progress
+- [ ] More diverse mission cards
+- [ ] Score tracking and leaderboards
+- [ ] Enhanced visual effects and animations
 
-### Low Priority
+### 📋 Future Enhancements
 - [ ] Add sound effects and music
-- [ ] Implement AI opponent
-- [ ] Add network multiplayer
-- [ ] Create game statistics tracking
+- [ ] Implement AI opponent with quantum strategy
+- [ ] Add network multiplayer support
+- [ ] Create game statistics and replay system
+- [ ] Support for 2-qubit gates and entanglement
+- [ ] Real quantum hardware integration
+- [ ] Advanced quantum algorithms in missions
 
 
 ---

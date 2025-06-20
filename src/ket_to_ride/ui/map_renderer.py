@@ -1,6 +1,7 @@
 import pygame
 import json
 import math
+import os
 from typing import Dict, List, Tuple, Optional
 
 class MapRenderer:
@@ -10,7 +11,10 @@ class MapRenderer:
         self.routes = []
         self.map_settings = {}
         self.font = None
+        self.rail_images = {}  # Cache for rail images
+        self.colors_config = None
         self.load_config()
+        self.load_rail_images()
         
     def load_config(self):
         try:
@@ -23,6 +27,24 @@ class MapRenderer:
             print(f"Config file not found: {self.config_path}")
         except json.JSONDecodeError:
             print(f"Invalid JSON in config file: {self.config_path}")
+    
+    def load_rail_images(self):
+        """Load rail images from colors config"""
+        try:
+            colors_path = os.path.join(os.path.dirname(self.config_path), 'colors.json')
+            with open(colors_path, 'r') as f:
+                self.colors_config = json.load(f)
+                
+            rail_images_config = self.colors_config.get('rail_images', {})
+            for gate_type, config in rail_images_config.items():
+                image_path = config.get('image_path')
+                if image_path and os.path.exists(image_path):
+                    try:
+                        self.rail_images[gate_type] = pygame.image.load(image_path)
+                    except Exception as e:
+                        print(f"Could not load rail image {image_path}: {e}")
+        except Exception as e:
+            print(f"Could not load rail images config: {e}")
     
     def initialize_font(self, size: int = None):
         if size is None:
@@ -146,7 +168,7 @@ class MapRenderer:
     def draw_train_car(self, surface: pygame.Surface, start_pos: Tuple[float, float], 
                        end_pos: Tuple[float, float], width: float, color: Tuple[int, int, int], 
                        gate: str, show_label: bool = False):
-        """Draw an individual train car segment"""
+        """Draw an individual train car segment with optional image"""
         # Calculate perpendicular vector for width
         dx = end_pos[0] - start_pos[0]
         dy = end_pos[1] - start_pos[1]
@@ -167,9 +189,39 @@ class MapRenderer:
             (int(end_pos[0] + perp_x), int(end_pos[1] + perp_y))
         ]
         
-        # Draw the train car
-        pygame.draw.polygon(surface, color, corners)
-        pygame.draw.polygon(surface, (255, 255, 255), corners, 2)
+        # Check if we have a rail image for this gate type
+        rail_image = self.rail_images.get(gate)
+        if rail_image:
+            try:
+                # Scale image to fit the train car
+                car_rect = pygame.Rect(
+                    min(corner[0] for corner in corners),
+                    min(corner[1] for corner in corners),
+                    int(length), int(width)
+                )
+                scaled_image = pygame.transform.scale(rail_image, (car_rect.width, car_rect.height))
+                
+                # Rotate image to align with route direction
+                angle = math.degrees(math.atan2(dy, dx))
+                rotated_image = pygame.transform.rotate(scaled_image, -angle)
+                
+                # Blit the rotated image
+                center_x = (start_pos[0] + end_pos[0]) / 2
+                center_y = (start_pos[1] + end_pos[1]) / 2
+                image_rect = rotated_image.get_rect(center=(int(center_x), int(center_y)))
+                surface.blit(rotated_image, image_rect)
+                
+                # Draw colored border
+                pygame.draw.polygon(surface, color, corners, 2)
+            except Exception as e:
+                print(f"Error drawing rail image for {gate}: {e}")
+                # Fallback to color
+                pygame.draw.polygon(surface, color, corners)
+                pygame.draw.polygon(surface, (255, 255, 255), corners, 2)
+        else:
+            # Draw with solid color (fallback)
+            pygame.draw.polygon(surface, color, corners)
+            pygame.draw.polygon(surface, (255, 255, 255), corners, 2)
         
         # Draw gate label on first segment
         if show_label and self.font:
@@ -255,7 +307,7 @@ class MapRenderer:
                     self.draw_route(surface, start_pos, end_pos, route, 0, highlighted)
                 else:
                     # Multiple routes - draw them parallel
-                    offset_distance = 8  # Distance between parallel routes
+                    offset_distance = 20  # Distance between parallel routes (increased for train car spacing)
                     total_width = (len(routes_group) - 1) * offset_distance
                     start_offset = -total_width / 2
                     

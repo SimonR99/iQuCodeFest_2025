@@ -37,7 +37,7 @@ class MainMenu:
     def initialize(self) -> bool:
         pygame.init()
         self.screen = pygame.display.set_mode((self.width, self.height))
-        pygame.display.set_caption("Ket-to-Ride - Main Menu")
+        pygame.display.set_caption("|ket> to ride - Main Menu")
         
         # Initialize fonts
         pygame.font.init()
