@@ -145,12 +145,11 @@ def create_classical_random_state() -> QuantumCircuit:
                         classical (separable) state.
     """
     # TODO: Student implementation goes here
-    qc = QuantumCircuit(2, 2)
-    if random.choice([True, False]):
-        qc.x(0)
-    if random.choice([True, False]):
-        qc.x(1)
-    return qc
+    qc_rand: QuantumCircuit = QuantumCircuit(2, 2)
+    for i in range(2):
+        angles = np.random.uniform(0, 2 * np.pi, 3)
+        qc_rand.u(angles[0], angles[1], angles[2], i)
+    return qc_rand
 
 
 def create_eavesdropped_state(bell_qc: QuantumCircuit = None) -> QuantumCircuit:
@@ -169,12 +168,15 @@ def create_eavesdropped_state(bell_qc: QuantumCircuit = None) -> QuantumCircuit:
     This function is used to model eavesdropping in the E91 protocol, showing how Eve's measurement destroys quantum correlations.
     """
     # TODO: Student implementation goes here
-    qc = QuantumCircuit(2, 2)
-    if random.choice([True, False]):
-        qc.x(0)
-    if random.choice([True, False]):
-        qc.x(1)
-    return qc
+    bell_qc.measure([0, 1], [0, 1])
+    bell_qc.reset([0, 1])
+
+    bell_qc.x(1).c_if(bell_qc.cregs[0], 1)
+    bell_qc.x(0).c_if(bell_qc.cregs[0], 2)
+    bell_qc.x(0).c_if(bell_qc.cregs[0], 3)
+    bell_qc.x(1).c_if(bell_qc.cregs[0], 3)
+
+    return bell_qc
 
 
 # --------------------------------------------------------

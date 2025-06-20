@@ -223,7 +223,7 @@ def run_e91_protocol(
         bell_pairs = [bell.create_eavesdropped_state(qc) if i < compromised_count else qc for i, qc in enumerate(bell_pairs)]  # change this
 
         print(f"Compromised pairs: {compromised_count} out of {num_pairs}")
-        print(f"Number of Bell pairs after eavesdropping: len(bell_pairs) : {len(bell_pairs)}")
+        print(f"Number of Bell pairs after eavesdropping: {len(bell_pairs)}")
 
     # Generate random bases for Alice and Bob : Set available bases using angle notation consistently
     alice_bases = generate_random_bases(num_pairs, ALICE_BASES)
