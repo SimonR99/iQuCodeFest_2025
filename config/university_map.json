@@ -1,58 +1,43 @@
 {
   "universities": {
-    "MIT": {
-      "name": "Massachusetts Institute of Technology",
-      "position": [750, 60],
+    "PolyMTL": {
+      "name": "Polytechnique Montréal",
+      "position": [750, 20],
       "color": [100, 150, 200]
     },
-    "Stanford": {
-      "name": "Stanford University",
-      "position": [150, 280],
+    "Los Alamos": {
+      "name": "Los Alamos National Laboratory",
+      "position": [260, 280],
       "color": [100, 150, 200]
     },
     "Harvard": {
       "name": "Harvard University",
-      "position": [820, 160],
+      "position": [820, 130],
       "color": [100, 150, 200]
     },
     "Caltech": {
       "name": "California Institute of Technology",
-      "position": [160, 460],
+      "position": [90, 350],
       "color": [100, 150, 200]
     },
     "Princeton": {
       "name": "Princeton University",
-      "position": [680, 200],
+      "position": [760, 200],
       "color": [100, 150, 200]
     },
-    "UC Berkeley": {
-      "name": "UC Berkeley",
-      "position": [40, 340],
-      "color": [100, 150, 200]
-    },
-    "Yale": {
-      "name": "Yale University",
-      "position": [780, 180],
+    "Stanford": {
+      "name": "Stanford University",
+      "position": [40, 240],
       "color": [100, 150, 200]
     },
     "UChicago": {
       "name": "University of Chicago",
-      "position": [320, 280],
-      "color": [100, 150, 200]
-    },
-    "Cornell": {
-      "name": "Cornell University",
-      "position": [640, 140],
-      "color": [100, 150, 200]
-    },
-    "UMichigan": {
-      "name": "University of Michigan",
-      "position": [480, 180],
+      "position": [550, 170],
       "color": [100, 150, 200]
     },
     "UTexas": {
       "name": "University of Texas",
-      "position": [320, 420],
+      "position": [450, 420],
       "color": [100, 150, 200]
     },
     "GeorgiaTech": {
@@ -62,17 +47,49 @@
     },
     "UWashington": {
       "name": "University of Washington",
-      "position": [180, 60],
+      "position": [80, 60],
       "color": [100, 150, 200]
     },
     "UofT": {
       "name": "University of Toronto",
-      "position": [520, 100],
+      "position": [690, 110],
       "color": [100, 150, 200]
     },
     "Carnegie": {
       "name": "Carnegie Mellon University",
-      "position": [580, 240],
+      "position": [630, 240],
+      "color": [100, 150, 200]
+    },
+    "U Utah": {
+      "name": "Utah State University",
+      "position": [200, 140],
+      "color": [100, 150, 200]
+    },
+    "Duke": {
+      "name": "Duke University",
+      "position": [740, 300],
+      "color": [100, 150, 200]
+    },
+    "UBC": {
+      "name": "University of British Columbia",
+      "position": [210, 0],
+      "color": [100, 150, 200]
+    },
+
+    "U Calgary": {
+      "name": "University of Calgary",
+      "position": [450, 30],
+      "color": [100, 150, 200]
+    },
+
+    "U Kansas": {
+      "name": "University of Kansas",
+      "position": [410, 200],
+      "color": [100, 150, 200]
+    },
+    "U Atlantis": {
+      "name": "University of Atlantis",
+      "position": [830, 400],
       "color": [100, 150, 200]
     }
   },
