@@ -3,94 +3,112 @@
     "PolyMTL": {
       "name": "Polytechnique Montréal",
       "position": [750, 20],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [50, -20]
     },
     "Los Alamos": {
       "name": "Los Alamos National Laboratory",
       "position": [260, 280],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [0, 40]
     },
     "Harvard": {
       "name": "Harvard University",
       "position": [820, 130],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [50, 0]
     },
     "Caltech": {
       "name": "California Institute of Technology",
       "position": [90, 350],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [-40, 20]
     },
     "Princeton": {
       "name": "Princeton University",
       "position": [760, 200],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [60, 0]
     },
     "Stanford": {
       "name": "Stanford University",
       "position": [40, 240],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [60, 0]
     },
     "U Chicago": {
       "name": "University of Chicago",
       "position": [550, 170],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [0, 40]
     },
     "U Texas": {
       "name": "University of Texas",
       "position": [450, 420],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [0, 40]
     },
     "GeorgiaTech": {
       "name": "Georgia Institute of Technology",
       "position": [620, 380],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [-60, 0]
     },
     "U Washington": {
       "name": "University of Washington",
       "position": [80, 60],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [-60, 0]
     },
     "UofT": {
       "name": "University of Toronto",
       "position": [690, 110],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [-40, 0]
     },
     "Carnegie": {
       "name": "Carnegie Mellon University",
       "position": [630, 240],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [-50, 0]
     },
     "U Utah": {
       "name": "Utah State University",
       "position": [200, 140],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [0, -40]
     },
     "Duke": {
       "name": "Duke University",
       "position": [740, 300],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [40, 0]
     },
     "UBC": {
       "name": "University of British Columbia",
       "position": [210, 0],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [-40, 0]
     },
 
     "U Calgary": {
       "name": "University of Calgary",
       "position": [450, 30],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [0, -40]
     },
 
     "U Kansas": {
       "name": "University of Kansas",
       "position": [410, 200],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [-60, 0]
     },
-    "U Atlantis": {
-      "name": "University of Atlantis",
+    "Lost Atlantis": {
+      "name": "Lost University of Atlantis",
       "position": [830, 400],
-      "color": [100, 150, 200]
+      "color": [100, 150, 200],
+      "name_tag_offset": [0, 40]
     }
   },
   "routes": [
@@ -235,7 +253,7 @@
       "claimed_by": null
     },
     {
-      "from": "U Atlantis",
+      "from": "Lost Atlantis",
       "to": "Duke",
       "gate": ["CNOT"],
       "length": 3,

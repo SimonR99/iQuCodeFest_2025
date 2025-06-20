@@ -253,16 +253,21 @@ class MapRenderer:
             current_y += unit_y * (segment_length + segment_spacing)
         
         # Draw gate label at the true center of the entire route FIRST (before squares)
-        if self.font:
-            route_center_x = (start_pos[0] + end_pos[0]) / 2
-            route_center_y = (start_pos[1] + end_pos[1]) / 2
+        # if self.font:
+        #     route_center_x = (start_pos[0] + end_pos[0]) / 2
+        #     route_center_y = (start_pos[1] + end_pos[1]) / 2
             
-            # Use white text for better visibility on routes
-            gate_text = self.font.render(gate, True, (255, 255, 255))
-            text_rect = gate_text.get_rect(center=(int(route_center_x), int(route_center_y)))
+        #     # Use white text for better visibility on routes
+        #     gate_text = self.font.render(gate, True, (255, 255, 255))
+        #     text_rect = gate_text.get_rect(center=(int(route_center_x), int(route_center_y)))
             
-            # Draw text directly without background for cleaner look
-            surface.blit(gate_text, text_rect)
+        #     # Add background for better readability
+        #     bg_rect = text_rect.inflate(6, 2)
+        #     pygame.draw.rect(surface, (0, 0, 0, 160), bg_rect)
+        #     pygame.draw.rect(surface, (255, 255, 255), bg_rect, 1)
+            
+        #     # Draw text on top of background
+        #     surface.blit(gate_text, text_rect)
         
         # Now draw all the player ownership squares AFTER the text so they're on top
         if claimed_by and player_color:
@@ -423,7 +428,12 @@ class MapRenderer:
             gate_text = self.font.render(gate, True, (255, 255, 255))
             text_rect = gate_text.get_rect(center=(int(label_center_x), int(label_center_y)))
             
-            # Draw text directly without background for cleaner look
+            # Add background for better readability
+            bg_rect = text_rect.inflate(6, 2)
+            pygame.draw.rect(surface, (0, 0, 0, 160), bg_rect)
+            pygame.draw.rect(surface, (255, 255, 255), bg_rect, 1)
+            
+            # Draw text on top of background
             surface.blit(gate_text, text_rect)
     
     def _draw_cnot_double_rails(self, surface: pygame.Surface, start_pos: Tuple[float, float], 
@@ -524,9 +534,12 @@ class MapRenderer:
             gate_text = self.font.render("CNOT", True, (255, 255, 255))
             text_rect = gate_text.get_rect(center=(int(label_center_x), int(label_center_y)))
             
-            # Draw text with small background for readability
-            bg_rect = text_rect.inflate(4, 2)
-            pygame.draw.rect(surface, (0, 0, 0, 128), bg_rect)
+            # Add background for better readability (matching other gate labels)
+            bg_rect = text_rect.inflate(6, 2)
+            pygame.draw.rect(surface, (0, 0, 0, 160), bg_rect)
+            pygame.draw.rect(surface, (255, 255, 255), bg_rect, 1)
+            
+            # Draw text on top of background
             surface.blit(gate_text, text_rect)
     
     def draw_university(self, surface: pygame.Surface, position: Tuple[int, int], 
@@ -543,9 +556,6 @@ class MapRenderer:
             sprite_y = y - sprite_height // 2
             
             surface.blit(self.university_sprite, (sprite_x, sprite_y))
-            
-            # Use sprite dimensions for text positioning
-            text_y_offset = sprite_height // 2 + 8
         else:
             # Fallback to circle if sprite not loaded
             radius = self.map_settings.get('university_radius', 15)
@@ -554,15 +564,21 @@ class MapRenderer:
             # Draw university circle
             pygame.draw.circle(surface, color, (x, y), radius)
             pygame.draw.circle(surface, (255, 255, 255), (x, y), radius, 2)
-            
-            text_y_offset = radius + 18
         
-        # Draw university name
+        # Draw university name with custom positioning from config
         if self.font:
             name_text = self.font.render(uni_id, True, (255, 255, 255))
-            text_rect = name_text.get_rect(center=(x, y + text_y_offset))
             
-            # Draw text directly without background for cleaner look
+            # Get custom offset from config, with fallback to default
+            name_tag_offset = uni_data.get('name_tag_offset', [0, 30])
+            offset_x, offset_y = name_tag_offset
+            
+            # Calculate text position using custom offset
+            text_x = x + offset_x
+            text_y = y + offset_y
+            text_rect = name_text.get_rect(center=(text_x, text_y))
+            
+            # Draw text directly without background
             surface.blit(name_text, text_rect)
     
     def draw_map(self, surface: pygame.Surface, map_rect: pygame.Rect, highlighted_route_idx: Optional[int] = None, highlighted_gate: Optional[str] = None, game_state=None, highlighted_gate_index: Optional[int] = None):

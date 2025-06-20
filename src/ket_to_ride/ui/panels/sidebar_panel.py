@@ -39,7 +39,7 @@ class SidebarPanel(BasePanel):
         pygame.draw.rect(surface, self.accent_color, title_rect_bg)
         
         # Draw title (centered and properly sized)
-        title_text = self.fonts['large_font'].render("|ket⟩ to Ride", True, self.text_color)
+        title_text = self.fonts['large_font'].render("Game Info", True, self.text_color)
         title_rect_text = title_text.get_rect(center=title_rect_bg.center)
         surface.blit(title_text, title_rect_text)
         
