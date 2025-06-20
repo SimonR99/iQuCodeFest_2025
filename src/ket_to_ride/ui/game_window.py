@@ -18,6 +18,33 @@ class GameWindow:
         self.screen: Optional[pygame.Surface] = None
         self.clock = pygame.time.Clock()
         self.running = False
+        self.game_state = None
+        self.panels = {}
+        self.colors = {}
+        self.fonts = {}
+        self.card_renderer = None
+        self.animation_manager = None
+        self.audio_manager = audio_manager
+        
+        # Game state
+        self.selected_route_idx = None
+        self.selected_gate = None  # Store which specific gate is selected
+        self.hovered_route_idx = None
+        self.available_cards = []
+        self.cards_drawn_this_turn = 0
+        self.max_cards_per_turn = 2
+        
+        # Mission selection state
+        self.mission_selection_active = False
+        self.available_missions = []
+        self.selected_missions = []
+        
+        # Layout rectangles
+        self.sidebar_rect = None
+        self.map_rect = None
+        self.hand_area_rect = None
+        self.available_cards_rect = None
+        self.mission_deck_rect = None
         
         # Initialize core components
         config_path = os.path.join(os.path.dirname(__file__), '../../..', 'config', 'university_map.json')
@@ -238,9 +265,12 @@ class GameWindow:
     def handle_panel_action(self, action: str):
         """Handle actions returned by panels"""
         if action.startswith("route_selected:"):
-            route_idx = int(action.split(":")[1])
+            parts = action.split(":")
+            route_idx = int(parts[1])
+            selected_gate = parts[2] if len(parts) > 2 else None
             self.selected_route_idx = route_idx
-            print(f"Selected route: {self.game_state.routes[route_idx]}")
+            self.selected_gate = selected_gate
+            print(f"Selected route: {self.game_state.routes[route_idx]} with gate: {selected_gate}")
         elif action.startswith("draw_card:"):
             card_idx = int(action.split(":")[1])
             self.draw_specific_card(card_idx)
@@ -401,29 +431,39 @@ class GameWindow:
             
         route = self.game_state.routes[self.selected_route_idx]
         
-        # Handle both array and single gate formats
-        gates = route['gate']
-        if isinstance(gates, str):
-            gates = [gates]
+        # Use the selected gate from the click, or determine which gate to use
+        selected_gate = self.selected_gate
         
+        if not selected_gate:
+            # Fallback: find an affordable gate if none was specifically selected
+            gates = route['gate']
+            if isinstance(gates, str):
+                gates = [gates]
+            
+            required_cards = route['length']
+            
+            # Find which gate types the player can afford
+            affordable_gates = []
+            from ..game import GateType
+            for gate_str in gates:
+                gate_type = GateType(gate_str)
+                if current_player.hand.get(gate_type, 0) >= required_cards:
+                    affordable_gates.append(gate_str)
+            
+            if not affordable_gates:
+                gate_names = '/'.join(gates)
+                print(f"Not enough cards for any gate type! Need {required_cards} of: {gate_names}")
+                return
+            
+            selected_gate = affordable_gates[0]
+        
+        # Check if player can afford this specific gate
         required_cards = route['length']
-        
-        # Find which gate types the player can afford
-        affordable_gates = []
         from ..game import GateType
-        for gate_str in gates:
-            gate_type = GateType(gate_str)
-            if current_player.hand.get(gate_type, 0) >= required_cards:
-                affordable_gates.append(gate_str)
-        
-        if not affordable_gates:
-            gate_names = '/'.join(gates)
-            print(f"Not enough cards for any gate type! Need {required_cards} of: {gate_names}")
+        gate_type = GateType(selected_gate)
+        if current_player.hand.get(gate_type, 0) < required_cards:
+            print(f"Not enough {selected_gate} cards! Need {required_cards}, have {current_player.hand.get(gate_type, 0)}")
             return
-        
-        # If multiple gates are available, use the first affordable one for now
-        # TODO: In the future, could add UI for player to choose
-        selected_gate = affordable_gates[0]
         
         # Use the game state's claim_route method which handles the new format
         if self.game_state.claim_route(current_player, self.selected_route_idx, selected_gate):
@@ -432,6 +472,7 @@ class GameWindow:
             
             print(f"Claimed route: {route['from']} -> {route['to']} with {selected_gate} gate")
             self.selected_route_idx = None
+            self.selected_gate = None
         else:
             print("Failed to claim route")
     
@@ -439,6 +480,7 @@ class GameWindow:
         """End current player's turn"""
         self.cards_drawn_this_turn = 0
         self.selected_route_idx = None
+        self.selected_gate = None
         self.game_state.next_turn()
         print(f"Turn ended. Now {self.game_state.get_current_player().name}'s turn")
     

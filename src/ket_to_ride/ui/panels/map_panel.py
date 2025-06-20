@@ -53,14 +53,27 @@ class MapPanel(BasePanel):
         
     def _handle_click_internal(self, pos: Tuple[int, int], game_state, **kwargs) -> Optional[str]:
         """Handle clicks on the map"""
-        route_idx = self.map_renderer.get_route_at_position(self.rect, pos)
-        if route_idx is not None:
+        route_result = self.map_renderer.get_route_at_position(self.rect, pos, game_state)
+        if route_result is not None:
+            route_idx, selected_gate = route_result
             route = game_state.routes[route_idx]
-            if route.get('claimed_by') is None:  # Only select unclaimed routes
-                return f"route_selected:{route_idx}"
+            
+            # Check if this specific gate is claimable
+            claimed_by = route.get('claimed_by', {})
+            if isinstance(claimed_by, dict):
+                # New format: check if this specific gate is unclaimed
+                if claimed_by.get(selected_gate) is None:
+                    return f"route_selected:{route_idx}:{selected_gate}"
+            else:
+                # Old format: check if route is unclaimed
+                if claimed_by is None:
+                    return f"route_selected:{route_idx}:{selected_gate}"
         return None
         
     def _handle_hover_internal(self, pos: Tuple[int, int], game_state, **kwargs) -> Optional[Any]:
         """Handle hover on the map"""
-        route_idx = self.map_renderer.get_route_at_position(self.rect, pos)
-        return route_idx 
+        route_result = self.map_renderer.get_route_at_position(self.rect, pos, game_state)
+        if route_result is not None:
+            route_idx, selected_gate = route_result
+            return route_idx  # For now, just return the route index for hover highlighting
+        return None 

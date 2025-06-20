@@ -82,154 +82,201 @@
       "to": "Harvard",
       "gate": ["H", "X"],
       "length": 1,
-      "claimed_by": null
+      "claimed_by": {
+        "H": null,
+        "X": null
+      }
     },
     {
       "from": "MIT",
       "to": "Yale",
       "gate": ["Z"],
       "length": 1,
-      "claimed_by": null
+      "claimed_by": {
+        "Z": null
+      }
     },
     {
       "from": "Harvard",
       "to": "Yale",
       "gate": ["I"],
       "length": 2,
-      "claimed_by": null
+      "claimed_by": {
+        "I": null
+      }
     },
     {
       "from": "Yale",
       "to": "Princeton",
       "gate": ["H"],
       "length": 2,
-      "claimed_by": null
+      "claimed_by": {
+        "H": null
+      }
     },
     {
       "from": "Princeton",
       "to": "Cornell",
       "gate": ["X"],
       "length": 1,
-      "claimed_by": null
+      "claimed_by": {
+        "X": null
+      }
     },
     {
       "from": "Cornell",
       "to": "UMichigan",
       "gate": ["Z"],
       "length": 2,
-      "claimed_by": null
+      "claimed_by": {
+        "Z": null
+      }
     },
     {
       "from": "UMichigan",
       "to": "UofT",
       "gate": ["CNOT"],
       "length": 1,
-      "claimed_by": null
+      "claimed_by": {
+        "CNOT": null
+      }
     },
     {
       "from": "UofT",
       "to": "MIT",
       "gate": ["I"],
       "length": 3,
-      "claimed_by": null
+      "claimed_by": {
+        "I": null
+      }
     },
     {
       "from": "UofT",
       "to": "UWashington",
       "gate": ["H"],
       "length": 3,
-      "claimed_by": null
+      "claimed_by": {
+        "H": null
+      }
     },
     {
       "from": "UWashington",
       "to": "Stanford",
       "gate": ["X", "Z"],
       "length": 2,
-      "claimed_by": null
+      "claimed_by": {
+        "X": null,
+        "Z": null
+      }
     },
     {
       "from": "Stanford",
       "to": "UC Berkeley",
       "gate": ["CNOT"],
       "length": 1,
-      "claimed_by": null
+      "claimed_by": {
+        "CNOT": null
+      }
     },
     {
       "from": "UC Berkeley",
       "to": "Caltech",
       "gate": ["I"],
       "length": 3,
-      "claimed_by": null
+      "claimed_by": {
+        "I": null
+      }
     },
     {
       "from": "Caltech",
       "to": "UTexas",
       "gate": ["H"],
       "length": 2,
-      "claimed_by": null
+      "claimed_by": {
+        "H": null
+      }
     },
     {
       "from": "UTexas",
       "to": "UChicago",
       "gate": ["X"],
       "length": 2,
-      "claimed_by": null
+      "claimed_by": {
+        "X": null
+      }
     },
     {
       "from": "UChicago",
       "to": "UMichigan",
       "gate": ["Z"],
       "length": 1,
-      "claimed_by": null
+      "claimed_by": {
+        "Z": null
+      }
     },
     {
       "from": "UChicago",
       "to": "Carnegie",
       "gate": ["CNOT"],
       "length": 2,
-      "claimed_by": null
+      "claimed_by": {
+        "CNOT": null
+      }
     },
     {
       "from": "Carnegie",
       "to": "Princeton",
       "gate": ["I"],
       "length": 2,
-      "claimed_by": null
+      "claimed_by": {
+        "I": null
+      }
     },
     {
       "from": "Carnegie",
       "to": "GeorgiaTech",
       "gate": ["H"],
       "length": 1,
-      "claimed_by": null
+      "claimed_by": {
+        "H": null
+      }
     },
     {
       "from": "GeorgiaTech",
       "to": "UTexas",
       "gate": ["X", "Z"],
       "length": 3,
-      "claimed_by": null
+      "claimed_by": {
+        "X": null,
+        "Z": null
+      }
     },
     {
       "from": "Stanford",
       "to": "Caltech",
       "gate": ["CNOT"],
       "length": 2,
-      "claimed_by": null
+      "claimed_by": {
+        "CNOT": null
+      }
     },
     {
       "from": "UC Berkeley",
       "to": "UWashington",
       "gate": ["I"],
       "length": 3,
-      "claimed_by": null
+      "claimed_by": {
+        "I": null
+      }
     },
     {
       "from": "Cornell",
       "to": "UofT",
       "gate": ["H"],
       "length": 2,
-      "claimed_by": null
+      "claimed_by": {
+        "H": null
+      }
     }
   ],
   "map_settings": {

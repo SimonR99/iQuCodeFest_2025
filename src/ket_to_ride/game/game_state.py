@@ -182,48 +182,68 @@ class GameState:
                 
         return drawn_cards
         
-    def can_claim_route(self, player: Player, route_idx: int) -> bool:
+    def can_claim_route(self, player: Player, route_idx: int, selected_gate: str = None) -> bool:
         if route_idx >= len(self.routes):
             return False
             
         route = self.routes[route_idx]
-        if route.get('claimed_by') is not None:
-            return False
-            
-        # Handle both array and single gate formats for backward compatibility
+        claimed_by = route.get('claimed_by', {})
+        
+        # Handle both old format (single claimed_by) and new format (claimed_by object)
+        if not isinstance(claimed_by, dict):
+            return claimed_by is None
+        
+        # Handle both array and single gate formats
         gates = route['gate']
         if isinstance(gates, str):
-            gates = [gates]  # Convert single gate to array
+            gates = [gates]
         
         length = route['length']
         
-        # Player must have enough cards of at least one of the gate types
+        # If a specific gate is selected, check only that gate
+        if selected_gate:
+            if selected_gate not in gates:
+                return False
+            if claimed_by.get(selected_gate) is not None:
+                return False
+            gate_type = GateType(selected_gate)
+            return player.can_claim_route(gate_type, length)
+        
+        # Check if player can claim at least one unclaimed gate
         for gate in gates:
-            gate_type = GateType(gate)
-            if player.can_claim_route(gate_type, length):
-                return True
+            if claimed_by.get(gate) is None:  # Gate is unclaimed
+                gate_type = GateType(gate)
+                if player.can_claim_route(gate_type, length):
+                    return True
         return False
         
     def claim_route(self, player: Player, route_idx: int, selected_gate: str = None) -> bool:
-        if not self.can_claim_route(player, route_idx):
+        if not self.can_claim_route(player, route_idx, selected_gate):
             return False
             
         route = self.routes[route_idx]
+        claimed_by = route.get('claimed_by', {})
         
-        # Handle both array and single gate formats for backward compatibility
+        # Handle both array and single gate formats
         gates = route['gate']
         if isinstance(gates, str):
-            gates = [gates]  # Convert single gate to array
+            gates = [gates]
         
         length = route['length']
         
-        # If no specific gate is selected and there are multiple options, use the first available one
+        # If no specific gate is selected, find the first affordable unclaimed one
         if selected_gate is None:
             for gate in gates:
-                gate_type = GateType(gate)
-                if player.can_claim_route(gate_type, length):
-                    selected_gate = gate
-                    break
+                if isinstance(claimed_by, dict) and claimed_by.get(gate) is None:
+                    gate_type = GateType(gate)
+                    if player.can_claim_route(gate_type, length):
+                        selected_gate = gate
+                        break
+                elif not isinstance(claimed_by, dict) and claimed_by is None:
+                    gate_type = GateType(gate)
+                    if player.can_claim_route(gate_type, length):
+                        selected_gate = gate
+                        break
         
         if selected_gate is None or selected_gate not in gates:
             return False
@@ -232,8 +252,14 @@ class GameState:
         route_id = f"{route['from']}-{route['to']}-{selected_gate}"
         
         if player.claim_route(gate_type, length, route_id):
-            route['claimed_by'] = player.player_id
-            route['claimed_with_gate'] = selected_gate  # Store which gate was used
+            # Update the claimed_by structure for individual gates
+            if not isinstance(claimed_by, dict):
+                # Initialize new format if using old format
+                route['claimed_by'] = {}
+                for gate in gates:
+                    route['claimed_by'][gate] = None
+            
+            route['claimed_by'][selected_gate] = player.player_id
             # Add route scoring
             self.add_route_scoring(player, length)
             return True
