@@ -155,13 +155,6 @@
     "background_color": [85, 95, 82],
     "university_radius": 18,
     "route_width": 4,
-    "font_size": 22,
-    "gate_colors": {
-      "I": [240, 235, 220],
-      "X": [200, 120, 100],
-      "Z": [120, 140, 160],
-      "H": [190, 170, 130],
-      "CNOT": [160, 120, 140]
-    }
+    "font_size": 22
   }
 }

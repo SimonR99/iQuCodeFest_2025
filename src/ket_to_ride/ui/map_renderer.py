@@ -29,12 +29,13 @@ class MapRenderer:
             print(f"Invalid JSON in config file: {self.config_path}")
     
     def load_rail_images(self):
-        """Load rail images from colors config"""
+        """Load rail images and colors from colors config"""
         try:
             colors_path = os.path.join(os.path.dirname(self.config_path), 'colors.json')
             with open(colors_path, 'r') as f:
                 self.colors_config = json.load(f)
                 
+            # Load rail images
             rail_images_config = self.colors_config.get('rail_images', {})
             for gate_type, config in rail_images_config.items():
                 image_path = config.get('image_path')
@@ -94,7 +95,7 @@ class MapRenderer:
         elif highlighted:
             color = (255, 255, 0)   # Yellow for highlighted routes
         else:
-            color = self.map_settings.get('gate_colors', {}).get(gate, (255, 255, 255))
+            color = self.get_gate_color(gate)
         
         # Calculate perpendicular offset for parallel routes
         if offset != 0:
@@ -398,3 +399,13 @@ class MapRenderer:
         
         # Distance from point to closest point on line
         return math.sqrt((px - closest_x)**2 + (py - closest_y)**2)
+    
+    def get_gate_color(self, gate: str) -> Tuple[int, int, int]:
+        """Get the color for a gate type from colors.json"""
+        if self.colors_config and 'gate_colors' in self.colors_config:
+            gate_config = self.colors_config['gate_colors'].get(gate, {})
+            rgb = gate_config.get('rgb', [255, 255, 255])  # Default to white
+            return tuple(rgb)
+        else:
+            # Fallback to map_settings if colors.json not available
+            return tuple(self.map_settings.get('gate_colors', {}).get(gate, [255, 255, 255]))
