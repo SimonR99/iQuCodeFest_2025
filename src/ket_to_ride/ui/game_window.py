@@ -7,6 +7,7 @@ import time
 from typing import Optional, Tuple, Dict, List
 from .map_renderer import MapRenderer
 from .animation import CardAnimation, AnimationManager
+from .card_renderer import CardRenderer
 from ..game import GameState, GateType
 
 class GameWindow:
@@ -63,6 +64,9 @@ class GameWindow:
             GateType.H: tuple(self.colors['gate_colors']['H']['rgb']),
             GateType.CNOT: tuple(self.colors['gate_colors']['CNOT']['rgb']),
         }
+        
+        # Card renderer will be initialized after fonts are created
+        self.card_renderer = None
     
     def update_layout(self) -> None:
         # Layout like real Ticket to Ride
@@ -105,6 +109,15 @@ class GameWindow:
         self.small_font = pygame.font.Font(None, 22)
         self.large_font = pygame.font.Font(None, 32)
         
+        # Initialize card renderer with fonts
+        fonts = {
+            'font': self.font,
+            'title_font': self.title_font,
+            'small_font': self.small_font,
+            'large_font': self.large_font
+        }
+        self.card_renderer = CardRenderer(self.colors, fonts)
+        
         # Initialize game with players
         self.setup_game()
         
@@ -134,88 +147,6 @@ class GameWindow:
         with open(config_path, 'r') as f:
             return json.load(f)
     
-    
-    def draw_card_with_image_support(self, surface, card_rect, gate_type, can_draw=True, text="", subtext=""):
-        """Draw a card with optional image support and colored border"""
-        if gate_type == "DECK":
-            # Special case for deck - use config colors
-            deck_config = self.colors['gate_colors'].get('DECK', {'rgb': [100, 100, 100], 'border_color': [255, 255, 255]})
-            color = tuple(deck_config['rgb'])
-            if not can_draw:
-                color = tuple(c // 2 for c in color)
-            
-            # Check for deck image
-            image_path = deck_config.get('image_path')
-            if image_path and os.path.exists(image_path):
-                try:
-                    card_image = pygame.image.load(image_path)
-                    scaled_image = pygame.transform.scale(card_image, (card_rect.width - 4, card_rect.height - 4))
-                    image_rect = scaled_image.get_rect(center=card_rect.center)
-                    surface.blit(scaled_image, image_rect)
-                    border_color = tuple(deck_config.get('border_color', [255, 255, 255]))
-                except Exception:
-                    pygame.draw.rect(surface, color, card_rect)
-                    border_color = tuple(deck_config.get('border_color', [255, 255, 255]))
-            else:
-                pygame.draw.rect(surface, color, card_rect)
-                border_color = tuple(deck_config.get('border_color', [255, 255, 255]))
-            
-            if not can_draw:
-                border_color = tuple(c // 2 for c in border_color)
-            pygame.draw.rect(surface, border_color, card_rect, 2)
-        else:
-            # Get gate configuration
-            gate_config = self.colors['gate_colors'].get(gate_type.value if hasattr(gate_type, 'value') else str(gate_type), {})
-            
-            # Check for image path
-            image_path = gate_config.get('image_path')
-            if image_path and os.path.exists(image_path):
-                try:
-                    # Load and scale image to fit card
-                    card_image = pygame.image.load(image_path)
-                    scaled_image = pygame.transform.scale(card_image, (card_rect.width - 4, card_rect.height - 4))
-                    
-                    # Draw image
-                    image_rect = scaled_image.get_rect(center=card_rect.center)
-                    surface.blit(scaled_image, image_rect)
-                    
-                    # Draw colored border
-                    border_color = tuple(gate_config.get('border_color', gate_config.get('rgb', [255, 255, 255])))
-                    if not can_draw:
-                        border_color = tuple(c // 2 for c in border_color)
-                    pygame.draw.rect(surface, border_color, card_rect, 3)
-                    
-                except Exception as e:
-                    print(f"Error loading card image {image_path}: {e}")
-                    # Fallback to color
-                    self._draw_color_card(surface, card_rect, gate_config, can_draw)
-            else:
-                # Use color background
-                self._draw_color_card(surface, card_rect, gate_config, can_draw)
-        
-        # Draw text if provided
-        if text:
-            text_color = (0, 0, 0) if can_draw else (64, 64, 64)
-            card_text = self.large_font.render(text, True, text_color)
-            text_rect = card_text.get_rect(center=(card_rect.centerx, card_rect.centery - 12))
-            surface.blit(card_text, text_rect)
-            
-        if subtext:
-            text_color = (0, 0, 0) if can_draw else (64, 64, 64)
-            sub_surface = self.font.render(subtext, True, text_color)
-            sub_rect = sub_surface.get_rect(center=(card_rect.centerx, card_rect.centery + 18))
-            surface.blit(sub_surface, sub_rect)
-    
-    def _draw_color_card(self, surface, card_rect, gate_config, can_draw):
-        """Helper to draw a card with color background"""
-        color = tuple(gate_config.get('rgb', [150, 150, 150]))
-        if not can_draw:
-            color = tuple(c // 2 for c in color)
-        
-        pygame.draw.rect(surface, color, card_rect)
-        border_color = (255, 255, 255) if can_draw else (128, 128, 128)
-        pygame.draw.rect(surface, border_color, card_rect, 2)
-        
     def setup_game(self):
         # Add default players
         player_colors = [
@@ -597,8 +528,6 @@ class GameWindow:
             # Get card info
             if card == "DECK":
                 gate_type = "DECK"
-                text = ""
-                subtext = ""
                 
                 # Add visual effect if deck is being used
                 can_draw = self.cards_drawn_this_turn < self.max_cards_per_turn
@@ -610,21 +539,19 @@ class GameWindow:
                     pulse_color = tuple(int(c * pulse) for c in original_color)
                     # Store original color and temporarily change it
                     self.colors['gate_colors']['DECK']['rgb'] = pulse_color
-                    self.draw_card_with_image_support(self.screen, card_rect, gate_type, can_draw, text, subtext)
+                    self.card_renderer.draw_card_with_image_support(self.screen, card_rect, gate_type, can_draw, "", "", False)
                     # Restore original color
                     self.colors['gate_colors']['DECK']['rgb'] = original_color
                 else:
-                    self.draw_card_with_image_support(self.screen, card_rect, gate_type, can_draw, text, subtext)
+                    self.card_renderer.draw_card_with_image_support(self.screen, card_rect, gate_type, can_draw, "", "", False)
             else:
                 gate_type = card
-                text = ""
-                subtext = ""
                 
                 # Check if card can be drawn
                 can_draw = self.cards_drawn_this_turn < self.max_cards_per_turn
                 
                 # Draw card using image support function
-                self.draw_card_with_image_support(self.screen, card_rect, gate_type, can_draw, text, subtext)
+                self.card_renderer.draw_card_with_image_support(self.screen, card_rect, gate_type, can_draw, "", "", False)
             
     def draw_hand_area(self) -> None:
         # Draw player hand area
@@ -650,6 +577,7 @@ class GameWindow:
         card_width = 90
         card_height = 60
         card_spacing = 12
+        count_text_height = 20  # Space for count text below card
         start_x = self.hand_area_rect.x + 20
         start_y = self.hand_area_rect.y + 50
         
@@ -670,10 +598,14 @@ class GameWindow:
                 shadow_rect = pygame.Rect(card_rect.x + 2, card_rect.y + 2, card_rect.width, card_rect.height)
                 pygame.draw.rect(self.screen, (0, 0, 0, 80), shadow_rect)
                 
-                # Draw card using image support
-                gate_text = gate_type.value
+                # Draw card without text
+                self.card_renderer.draw_card_with_image_support(self.screen, card_rect, gate_type, True, "", "", False)
+                
+                # Draw count below the card
                 count_text = f"x{count}"
-                self.draw_card_with_image_support(self.screen, card_rect, gate_type, True, gate_text, count_text)
+                count_surface = self.small_font.render(count_text, True, self.TEXT_COLOR)
+                count_rect = count_surface.get_rect(center=(card_rect.centerx, card_rect.bottom + count_text_height // 2))
+                self.screen.blit(count_surface, count_rect)
                 
                 x_offset += card_width + card_spacing
     
@@ -807,8 +739,7 @@ class GameWindow:
             self.screen.blit(shadow_surface, shadow_rect)
             
             # Draw the animated card
-            gate_text = animation.card_type.value if hasattr(animation.card_type, 'value') else str(animation.card_type)
-            self.draw_card_with_image_support(self.screen, card_rect, animation.card_type, True, gate_text, "")
+            self.card_renderer.draw_card_with_image_support(self.screen, card_rect, animation.card_type, True, "", "", False)
             
         # Draw new cards appearing in trade row
         for animation in self.animation_manager.new_card_animations:
@@ -829,8 +760,7 @@ class GameWindow:
             )
             
             # Draw the new card
-            gate_text = animation.card_type.value if hasattr(animation.card_type, 'value') else str(animation.card_type)
-            self.draw_card_with_image_support(self.screen, card_rect, animation.card_type, True, gate_text, "")
+            self.card_renderer.draw_card_with_image_support(self.screen, card_rect, animation.card_type, True, "", "", False)
     
     def draw(self) -> None:
         self.screen.fill(self.BACKGROUND_COLOR)
