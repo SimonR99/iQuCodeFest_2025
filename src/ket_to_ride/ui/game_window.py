@@ -188,12 +188,7 @@ class GameWindow:
         
     def handle_mouse_click(self, pos: Tuple[int, int]):
         """Handle mouse clicks by delegating to panels"""
-        # Handle mission selection clicks if active
-        if self.mission_selection_active:
-            self.handle_mission_selection_click(pos)
-            return
-            
-        # Try each panel
+        # Try each panel first (this handles mission selection buttons)
         for panel_name, panel in self.panels.items():
             action = panel.handle_click(pos, self.game_state, 
                                       available_cards=self.available_cards,
@@ -206,6 +201,10 @@ class GameWindow:
             if action:
                 self.handle_panel_action(action)
                 return
+        
+        # Handle mission card selection clicks if active (only if no panel handled it)
+        if self.mission_selection_active:
+            self.handle_mission_selection_click(pos)
                 
     def handle_mouse_motion(self, pos: Tuple[int, int]):
         """Handle mouse motion for hover effects"""

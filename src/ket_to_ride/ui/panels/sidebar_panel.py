@@ -11,6 +11,15 @@ class SidebarPanel(BasePanel):
         self.action_buttons = []  # List of (rect, action, enabled) tuples
         self.hovered_button = None
         
+        # Scrolling state
+        self.scroll_offset = 0
+        self.max_scroll = 0
+        self.content_height = 0
+        self.scrollbar_width = 12
+        self.scrollbar_dragging = False
+        self.scrollbar_drag_start = 0
+        self.scroll_start_offset = 0
+        
     def draw(self, surface: pygame.Surface, game_state, **kwargs):
         """Draw the sidebar panel with detailed sections like the original"""
         cards_drawn_this_turn = kwargs.get('cards_drawn_this_turn', 0)
@@ -24,15 +33,37 @@ class SidebarPanel(BasePanel):
         pygame.draw.rect(surface, self.info_panel_color, self.rect)
         pygame.draw.rect(surface, self.border_color, self.rect, 3)
         
-        # Add title background
+        # Add title background (fixed at top, not scrollable)
         title_rect_bg = pygame.Rect(self.rect.x + 3, self.rect.y + 3, 
-                                   self.rect.width - 6, 50)
+                                   self.rect.width - 6 - self.scrollbar_width, 50)
         pygame.draw.rect(surface, self.accent_color, title_rect_bg)
         
         # Draw title (centered and properly sized)
         title_text = self.fonts['large_font'].render("|ket⟩ to Ride", True, self.text_color)
         title_rect_text = title_text.get_rect(center=title_rect_bg.center)
         surface.blit(title_text, title_rect_text)
+        
+        # Create scrollable content area (below title)
+        content_rect = pygame.Rect(self.rect.x + 3, self.rect.y + 56, 
+                                  self.rect.width - 6 - self.scrollbar_width, 
+                                  self.rect.height - 59)
+        
+        # Create a surface for scrollable content
+        if content_rect.height > 0:
+            content_surface = pygame.Surface((content_rect.width, max(content_rect.height, 2000)), pygame.SRCALPHA)
+            content_surface.fill((0, 0, 0, 0))  # Transparent
+            
+            # Draw content on the scrollable surface
+            self._draw_scrollable_content(content_surface, game_state, cards_drawn_this_turn, 
+                                        max_cards_per_turn, selected_route_idx, 
+                                        mission_selection_active, available_missions, selected_missions)
+            
+            # Blit the visible portion to the main surface
+            visible_rect = pygame.Rect(0, self.scroll_offset, content_rect.width, content_rect.height)
+            surface.blit(content_surface, content_rect, visible_rect)
+            
+            # Draw scrollbar if needed
+            self._draw_scrollbar(surface, content_rect)
         
         current_player = game_state.get_current_player()
         if not current_player:
