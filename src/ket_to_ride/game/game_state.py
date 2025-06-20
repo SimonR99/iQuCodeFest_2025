@@ -198,37 +198,6 @@ class GameState:
                     
         return False
         
-    def has_path(self, player: Player, start: str, target: str) -> bool:
-        # Simple BFS to check if player has claimed routes forming a path
-        if start == target:
-            return True
-            
-        visited = set()
-        queue = [start]
-        
-        while queue:
-            current = queue.pop(0)
-            if current in visited:
-                continue
-                
-            visited.add(current)
-            
-            # Find routes claimed by this player from current city
-            for route in self.routes:
-                if route.get('claimed_by') == player.player_id:
-                    next_city = None
-                    if route['from'] == current:
-                        next_city = route['to']
-                    elif route['to'] == current:
-                        next_city = route['from']
-                        
-                    if next_city and next_city not in visited:
-                        if next_city == target:
-                            return True
-                        queue.append(next_city)
-                        
-        return False
-        
     def get_path_routes(self, player: Player, start: str, target: str) -> List[Dict]:
         """Get the actual routes in a path from start to target for a player"""
         if start == target:

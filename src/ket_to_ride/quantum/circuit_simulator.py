@@ -50,10 +50,6 @@ class QuantumGates:
     X = np.array([[0, 1], 
                   [1, 0]], dtype=complex)
     
-    # Pauli-Y gate
-    Y = np.array([[0, -1j], 
-                  [1j, 0]], dtype=complex)
-    
     # Pauli-Z gate
     Z = np.array([[1, 0], 
                   [0, -1]], dtype=complex)

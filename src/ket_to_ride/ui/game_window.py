@@ -79,7 +79,6 @@ class GameWindow:
         
         # Selected route for highlighting
         self.selected_route_idx = None
-        self.selected_university = None
         self.hovered_route_idx = None
         
         # Available cards for drawing (like Ticket to Ride online)
@@ -108,15 +107,6 @@ class GameWindow:
         
         # Map gate types to colors for drawing
         self.gate_colors = {
-            GateType.I: tuple(self.colors['gate_colors']['I']['rgb']),
-            GateType.X: tuple(self.colors['gate_colors']['X']['rgb']),
-            GateType.Z: tuple(self.colors['gate_colors']['Z']['rgb']),
-            GateType.H: tuple(self.colors['gate_colors']['H']['rgb']),
-            GateType.CNOT: tuple(self.colors['gate_colors']['CNOT']['rgb']),
-        }
-        
-        # Map gate types to colors for rail drawing
-        self.rail_colors = {
             GateType.I: tuple(self.colors['gate_colors']['I']['rgb']),
             GateType.X: tuple(self.colors['gate_colors']['X']['rgb']),
             GateType.Z: tuple(self.colors['gate_colors']['Z']['rgb']),
@@ -330,8 +320,6 @@ class GameWindow:
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.running = False
-                elif event.key == pygame.K_d:  # Draw cards
-                    self.handle_draw_cards()
                 elif event.key == pygame.K_SPACE:  # Next turn
                     self.end_turn()
                 elif event.key == pygame.K_c:  # Claim selected route
@@ -349,22 +337,6 @@ class GameWindow:
             elif event.type == pygame.MOUSEMOTION:
                 self.handle_mouse_motion(event.pos)
                     
-    def handle_draw_cards(self):
-        current_player = self.game_state.get_current_player()
-        if current_player and not self.game_state.game_over:
-            if self.cards_drawn_this_turn >= self.max_cards_per_turn:
-                print("Already drew maximum cards this turn!")
-                return
-                
-            cards_to_draw = min(2 - self.cards_drawn_this_turn, 2)
-            cards = self.game_state.draw_cards(cards_to_draw)
-            for card in cards:
-                current_player.add_cards(card)
-            self.cards_drawn_this_turn += cards_to_draw
-            
-            if self.cards_drawn_this_turn >= self.max_cards_per_turn:
-                self.end_turn()
-            
     def handle_mouse_motion(self, pos: Tuple[int, int]):
         # Update hovered route for highlighting
         if self.map_rect.collidepoint(pos):
@@ -392,12 +364,6 @@ class GameWindow:
                     print(f"Selected route: {route['from']} -> {route['to']} ({route['gate']}, {route['length']})")
                 return
             
-            # Check if clicking on a university
-            uni_id = self.map_renderer.get_university_at_position(self.map_rect, pos)
-            if uni_id:
-                self.selected_university = uni_id
-                print(f"Selected university: {uni_id}")
-                
         # Handle clicking on selected route to claim it
         if self.selected_route_idx is not None:
             self.handle_claim_route()
