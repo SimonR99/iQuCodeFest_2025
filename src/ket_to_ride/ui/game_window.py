@@ -2,9 +2,60 @@ import pygame
 import sys
 import os
 import json
-from typing import Optional, Tuple
+import math
+import time
+from typing import Optional, Tuple, Dict, List
 from .map_renderer import MapRenderer
 from ..game import GameState, GateType
+
+class CardAnimation:
+    """Handles card movement animations"""
+    def __init__(self, start_pos: Tuple[int, int], end_pos: Tuple[int, int], 
+                 card_type, duration: float = 0.5, scale_effect: bool = True):
+        self.start_pos = start_pos
+        self.end_pos = end_pos
+        self.card_type = card_type
+        self.duration = duration
+        self.start_time = time.time()
+        self.completed = False
+        self.scale_effect = scale_effect
+        
+    def get_current_pos(self) -> Tuple[int, int]:
+        """Get the current position of the card based on animation progress"""
+        elapsed = time.time() - self.start_time
+        progress = min(elapsed / self.duration, 1.0)
+        
+        # Use smooth easing function
+        ease_progress = 1 - (1 - progress) ** 3  # Ease-out cubic
+        
+        x = self.start_pos[0] + (self.end_pos[0] - self.start_pos[0]) * ease_progress
+        y = self.start_pos[1] + (self.end_pos[1] - self.start_pos[1]) * ease_progress
+        
+        return (int(x), int(y))
+        
+    def get_scale(self) -> float:
+        """Get the current scale factor for the card (1.0 = normal size)"""
+        if not self.scale_effect:
+            return 1.0
+            
+        elapsed = time.time() - self.start_time
+        progress = min(elapsed / self.duration, 1.0)
+        
+        # Scale up to 1.2x at 50% progress, then back to 1.0
+        if progress < 0.5:
+            scale_progress = progress * 2  # 0 to 1
+            return 1.0 + 0.2 * scale_progress
+        else:
+            scale_progress = (progress - 0.5) * 2  # 0 to 1
+            return 1.2 - 0.2 * scale_progress
+        
+    def is_finished(self) -> bool:
+        """Check if animation is complete"""
+        if self.completed:
+            return True
+        if time.time() - self.start_time >= self.duration:
+            self.completed = True
+        return self.completed
 
 class GameWindow:
     def __init__(self, width: int = 1280, height: int = 720):
@@ -20,6 +71,11 @@ class GameWindow:
         config_path = os.path.join(os.path.dirname(__file__), '../../..', 'config', 'university_map.json')
         self.map_renderer = MapRenderer(config_path)
         self.game_state = GameState(config_path)
+        
+        # Animation state
+        self.card_animations: List[CardAnimation] = []
+        self.new_card_animations: List[CardAnimation] = []  # For cards appearing in trade row
+        self.deck_animation_start = None  # Track when deck animation starts
         
         # Selected route for highlighting
         self.selected_route_idx = None
@@ -395,7 +451,7 @@ class GameWindow:
         selected_card = self.available_cards[card_idx]
         
         if selected_card == "DECK":
-            # Draw from deck (can draw 2 cards)
+            # Draw from deck (can draw 2 cards) - no animation needed
             cards_to_draw = min(2 - self.cards_drawn_this_turn, 2)
             cards = self.game_state.draw_cards(cards_to_draw)
             for card in cards:
@@ -403,23 +459,119 @@ class GameWindow:
             self.cards_drawn_this_turn += cards_to_draw
             print(f"Drew {cards_to_draw} cards from deck")
         else:
-            # Take specific visible card (counts as 1 card)
-            current_player.add_cards(selected_card)
-            self.cards_drawn_this_turn += 1
-            
-            # Replace with new card from deck
-            if self.game_state.deck:
-                new_card = self.game_state.deck.pop()
-                self.available_cards[card_idx] = new_card
-            else:
-                # Remove card if deck is empty
-                self.available_cards.pop(card_idx)
-                
-            print(f"Drew card: {selected_card}")
+            # Create animation for taking specific visible card
+            self.create_card_animation(card_idx, selected_card)
+            return  # Don't process immediately, wait for animation
             
         # Check if turn should end
         if self.cards_drawn_this_turn >= self.max_cards_per_turn:
             self.end_turn()
+            
+    def create_card_animation(self, card_idx: int, card_type):
+        """Create animation for card moving from trade row to hand"""
+        # Calculate start position (card in trade row)
+        card_height = 60
+        card_spacing = 10
+        start_x = self.available_cards_rect.x + 10
+        start_y = self.available_cards_rect.y + 60 + card_idx * (card_height + card_spacing)
+        start_pos = (start_x, start_y)
+        
+        # Calculate end position based on existing cards in hand
+        current_player = self.game_state.get_current_player()
+        if not current_player:
+            return
+            
+        # Find where this card type should go in the hand
+        card_width = 90
+        card_spacing_hand = 12
+        hand_start_x = self.hand_area_rect.x + 20
+        hand_start_y = self.hand_area_rect.y + 50
+        
+        # Find position of existing card of same type, or end position
+        target_x = hand_start_x
+        target_y = hand_start_y
+        
+        # Check if we have this card type already
+        if current_player.hand.get(card_type, 0) > 0:
+            # Find the position of the existing card of this type
+            x_offset = 0
+            for gate_type, count in current_player.hand.items():
+                if count > 0:
+                    if gate_type == card_type:
+                        # Found the existing pile, animate to this position
+                        target_x = hand_start_x + x_offset
+                        target_y = hand_start_y
+                        break
+                    x_offset += card_width + card_spacing_hand
+        else:
+            # No existing pile, add at the end
+            x_offset = 0
+            for gate_type, count in current_player.hand.items():
+                if count > 0:
+                    x_offset += card_width + card_spacing_hand
+            target_x = hand_start_x + x_offset
+            target_y = hand_start_y
+        
+        end_pos = (target_x, target_y)
+        
+        # Create animation
+        animation = CardAnimation(start_pos, end_pos, card_type, duration=0.6)
+        self.card_animations.append(animation)
+        
+        # Store animation data for completion
+        animation.card_idx = card_idx
+        animation.card_type = card_type
+        
+    def complete_card_animation(self, animation: CardAnimation):
+        """Complete the card animation and update game state"""
+        current_player = self.game_state.get_current_player()
+        if not current_player:
+            return
+            
+        # Add card to player's hand
+        current_player.add_cards(animation.card_type)
+        self.cards_drawn_this_turn += 1
+        
+        # Replace with new card from deck
+        if self.game_state.deck:
+            new_card = self.game_state.deck.pop()
+            self.available_cards[animation.card_idx] = new_card
+            
+            # Create animation for new card appearing
+            self.create_new_card_animation(animation.card_idx, new_card)
+        else:
+            # Remove card if deck is empty
+            self.available_cards.pop(animation.card_idx)
+            
+        print(f"Drew card: {animation.card_type}")
+        
+        # Check if turn should end
+        if self.cards_drawn_this_turn >= self.max_cards_per_turn:
+            self.end_turn()
+            
+    def create_new_card_animation(self, card_idx: int, card_type):
+        """Create animation for new card appearing in trade row"""
+        # Calculate final position in trade row
+        card_height = 60
+        card_spacing = 10
+        end_x = self.available_cards_rect.x + 10
+        end_y = self.available_cards_rect.y + 60 + card_idx * (card_height + card_spacing)
+        end_pos = (end_x, end_y)
+        
+        # Start from the deck position (where the DECK card is)
+        # Find the DECK card position
+        deck_idx = len(self.available_cards) - 1  # DECK is always last
+        deck_y = self.available_cards_rect.y + 60 + deck_idx * (card_height + card_spacing)
+        start_x = self.available_cards_rect.x + 10
+        start_y = deck_y
+        start_pos = (start_x, start_y)
+        
+        # Set deck animation start time for visual effect
+        self.deck_animation_start = time.time()
+        
+        # Create animation
+        animation = CardAnimation(start_pos, end_pos, card_type, duration=0.4)
+        self.new_card_animations.append(animation)
             
     def end_turn(self):
         """End the current player's turn"""
@@ -537,6 +689,10 @@ class GameWindow:
         start_y = self.available_cards_rect.y + 60
         
         for i, card in enumerate(self.available_cards):
+            # Skip if card is being animated (moving to hand)
+            if any(anim.card_idx == i for anim in self.card_animations):
+                continue
+                
             y = start_y + i * (card_height + card_spacing)
             card_rect = pygame.Rect(start_x, y, card_width, card_height)
             
@@ -549,16 +705,32 @@ class GameWindow:
                 gate_type = "DECK"
                 text = "DECK"
                 subtext = ""
+                
+                # Add visual effect if deck is being used
+                can_draw = self.cards_drawn_this_turn < self.max_cards_per_turn
+                if self.deck_animation_start and time.time() - self.deck_animation_start < 0.4:
+                    # Add a pulsing effect to the deck
+                    pulse = abs(math.sin((time.time() - self.deck_animation_start) * 10)) * 0.3 + 0.7
+                    # Temporarily modify the card color for visual feedback
+                    original_color = self.colors['gate_colors']['DECK']['rgb']
+                    pulse_color = tuple(int(c * pulse) for c in original_color)
+                    # Store original color and temporarily change it
+                    self.colors['gate_colors']['DECK']['rgb'] = pulse_color
+                    self.draw_card_with_image_support(self.screen, card_rect, gate_type, can_draw, text, subtext)
+                    # Restore original color
+                    self.colors['gate_colors']['DECK']['rgb'] = original_color
+                else:
+                    self.draw_card_with_image_support(self.screen, card_rect, gate_type, can_draw, text, subtext)
             else:
                 gate_type = card
                 text = card.value if hasattr(card, 'value') else str(card)
                 subtext = ""
-            
-            # Check if card can be drawn
-            can_draw = self.cards_drawn_this_turn < self.max_cards_per_turn
-            
-            # Draw card using image support function
-            self.draw_card_with_image_support(self.screen, card_rect, gate_type, can_draw, text, subtext)
+                
+                # Check if card can be drawn
+                can_draw = self.cards_drawn_this_turn < self.max_cards_per_turn
+                
+                # Draw card using image support function
+                self.draw_card_with_image_support(self.screen, card_rect, gate_type, can_draw, text, subtext)
             
     def draw_hand_area(self) -> None:
         # Draw player hand area
@@ -714,6 +886,58 @@ class GameWindow:
                 self.screen.blit(text, (self.sidebar_rect.x + 15, self.sidebar_rect.y + y_offset))
             y_offset += 22
     
+    def draw_animated_cards(self):
+        """Draw cards that are currently being animated"""
+        # Draw cards moving to hand
+        for animation in self.card_animations:
+            pos = animation.get_current_pos()
+            scale = animation.get_scale()
+            
+            # Calculate scaled card dimensions
+            base_width, base_height = 90, 60
+            scaled_width = int(base_width * scale)
+            scaled_height = int(base_height * scale)
+            
+            # Center the scaled card on the animation position
+            card_rect = pygame.Rect(
+                pos[0] - (scaled_width - base_width) // 2,
+                pos[1] - (scaled_height - base_height) // 2,
+                scaled_width, scaled_height
+            )
+            
+            # Draw card shadow
+            shadow_rect = pygame.Rect(card_rect.x + 2, card_rect.y + 2, card_rect.width, card_rect.height)
+            shadow_surface = pygame.Surface((card_rect.width, card_rect.height))
+            shadow_surface.set_alpha(80)
+            shadow_surface.fill((0, 0, 0))
+            self.screen.blit(shadow_surface, shadow_rect)
+            
+            # Draw the animated card
+            gate_text = animation.card_type.value if hasattr(animation.card_type, 'value') else str(animation.card_type)
+            self.draw_card_with_image_support(self.screen, card_rect, animation.card_type, True, gate_text, "")
+            
+        # Draw new cards appearing in trade row
+        for animation in self.new_card_animations:
+            pos = animation.get_current_pos()
+            scale = animation.get_scale()
+            
+            # Calculate scaled card dimensions
+            base_width = self.available_cards_rect.width - 20
+            base_height = 60
+            scaled_width = int(base_width * scale)
+            scaled_height = int(base_height * scale)
+            
+            # Center the scaled card on the animation position
+            card_rect = pygame.Rect(
+                pos[0] - (scaled_width - base_width) // 2,
+                pos[1] - (scaled_height - base_height) // 2,
+                scaled_width, scaled_height
+            )
+            
+            # Draw the new card
+            gate_text = animation.card_type.value if hasattr(animation.card_type, 'value') else str(animation.card_type)
+            self.draw_card_with_image_support(self.screen, card_rect, animation.card_type, True, gate_text, "")
+    
     def draw(self) -> None:
         self.screen.fill(self.BACKGROUND_COLOR)
         
@@ -721,6 +945,7 @@ class GameWindow:
         self.draw_map_area()
         self.draw_available_cards()
         self.draw_hand_area()
+        self.draw_animated_cards()  # Draw animated cards on top
         
         pygame.display.flip()
     
@@ -732,11 +957,36 @@ class GameWindow:
         
         while self.running:
             self.handle_events()
+            self.update_animations()  # Update animations
             self.draw()
             self.clock.tick(60)
         
         pygame.quit()
         sys.exit()
+
+    def update_animations(self):
+        """Update and complete animations"""
+        # Update card animations (moving to hand)
+        completed_animations = []
+        for animation in self.card_animations:
+            if animation.is_finished():
+                completed_animations.append(animation)
+                self.complete_card_animation(animation)
+        
+        # Remove completed animations
+        for animation in completed_animations:
+            self.card_animations.remove(animation)
+            
+        # Update new card animations (appearing in trade row)
+        completed_new_animations = []
+        for animation in self.new_card_animations:
+            if animation.is_finished():
+                completed_new_animations.append(animation)
+                
+        # Remove completed new card animations and clear deck animation state
+        for animation in completed_new_animations:
+            self.new_card_animations.remove(animation)
+            self.deck_animation_start = None  # Clear deck animation state
 
 def main():
     game_window = GameWindow()
