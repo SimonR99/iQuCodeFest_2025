@@ -5,7 +5,7 @@ from typing import Optional
 from .game_window import GameWindow
 
 class MainMenu:
-    def __init__(self, width: int = 1400, height: int = 900):
+    def __init__(self, width: int = 1280, height: int = 720):
         self.width = width
         self.height = height
         self.screen: Optional[pygame.Surface] = None
@@ -41,7 +41,7 @@ class MainMenu:
         
         # Initialize fonts
         pygame.font.init()
-        self.title_font = pygame.font.Font(None, 72)
+        self.title_font = pygame.font.Font(None, 76)
         self.subtitle_font = pygame.font.Font(None, 36)
         self.button_font = pygame.font.Font(None, 42)
         self.small_font = pygame.font.Font(None, 24)
@@ -89,7 +89,7 @@ class MainMenu:
         button_width = 300
         button_height = 60
         button_spacing = 20
-        start_y = self.height // 2 - 20
+        start_y = self.height // 2 - 80
         
         for i, button in enumerate(self.buttons):
             button_x = self.width // 2 - button_width // 2
@@ -105,7 +105,7 @@ class MainMenu:
         button_width = 300
         button_height = 60
         button_spacing = 20
-        start_y = self.height // 2 - 20
+        start_y = self.height // 2 - 80
         
         self.selected_button = -1  # No selection by default
         
@@ -135,19 +135,19 @@ class MainMenu:
         
         # Draw title
         title_text = self.title_font.render("|ket> to ride", True, self.TITLE_COLOR)
-        title_rect = title_text.get_rect(center=(self.width // 2, self.height // 4))
+        title_rect = title_text.get_rect(center=(self.width // 2, self.height // 5))
         self.screen.blit(title_text, title_rect)
         
         # Draw subtitle
         subtitle_text = self.subtitle_font.render("Quantum Train Adventure", True, self.TITLE_COLOR)
-        subtitle_rect = subtitle_text.get_rect(center=(self.width // 2, self.height // 4 + 80))
+        subtitle_rect = subtitle_text.get_rect(center=(self.width // 2, self.height // 5 + 80))
         self.screen.blit(subtitle_text, subtitle_rect)
         
         # Draw buttons
         button_width = 300
         button_height = 60
         button_spacing = 20
-        start_y = self.height // 2 - 20
+        start_y = self.height // 2 - 80
         
         for i, button in enumerate(self.buttons):
             button_x = self.width // 2 - button_width // 2
@@ -177,7 +177,7 @@ class MainMenu:
             # Draw "Coming Soon" for disabled buttons
             if not button["enabled"]:
                 coming_soon = self.small_font.render("Coming Soon", True, self.BUTTON_DISABLED_TEXT_COLOR)
-                coming_rect = coming_soon.get_rect(center=(button_rect.centerx, button_rect.bottom + 15))
+                coming_rect = coming_soon.get_rect(center=(button_rect.centerx, button_rect.bottom - 11))
                 self.screen.blit(coming_soon, coming_rect)
         
         # Draw instructions

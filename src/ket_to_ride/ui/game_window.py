@@ -7,7 +7,7 @@ from .map_renderer import MapRenderer
 from ..game import GameState, GateType
 
 class GameWindow:
-    def __init__(self, width: int = 1400, height: int = 900):
+    def __init__(self, width: int = 1280, height: int = 720):
         self.width = width
         self.height = height
         self.min_width = 1000
