@@ -2,22 +2,22 @@
   "universities": {
     "MIT": {
       "name": "Massachusetts Institute of Technology",
-      "position": [780, 180],
+      "position": [750, 60],
       "color": [200, 100, 100]
     },
     "Stanford": {
       "name": "Stanford University",
-      "position": [150, 400],
+      "position": [150, 280],
       "color": [150, 200, 100]
     },
     "Harvard": {
       "name": "Harvard University",
-      "position": [790, 175],
+      "position": [820, 160],
       "color": [100, 150, 200]
     },
     "Caltech": {
       "name": "California Institute of Technology",
-      "position": [180, 470],
+      "position": [160, 460],
       "color": [200, 150, 100]
     },
     "Princeton": {
@@ -27,17 +27,17 @@
     },
     "UC Berkeley": {
       "name": "UC Berkeley",
-      "position": [170, 410],
+      "position": [40, 340],
       "color": [200, 200, 100]
     },
     "Yale": {
       "name": "Yale University",
-      "position": [720, 190],
+      "position": [780, 180],
       "color": [120, 120, 200]
     },
     "UChicago": {
       "name": "University of Chicago",
-      "position": [480, 250],
+      "position": [320, 280],
       "color": [100, 200, 150]
     },
     "Cornell": {
@@ -47,40 +47,44 @@
     },
     "UMichigan": {
       "name": "University of Michigan",
-      "position": [530, 210],
+      "position": [480, 180],
       "color": [255, 100, 100]
     },
     "UTexas": {
       "name": "University of Texas",
-      "position": [430, 400],
+      "position": [320, 420],
       "color": [200, 100, 50]
     },
     "GeorgiaTech": {
       "name": "Georgia Institute of Technology",
-      "position": [600, 350],
+      "position": [620, 380],
       "color": [255, 200, 50]
     },
     "UWashington": {
       "name": "University of Washington",
-      "position": [100, 100],
+      "position": [180, 60],
       "color": [120, 80, 200]
     },
     "UofT": {
       "name": "University of Toronto",
-      "position": [660, 170],
+      "position": [520, 100],
       "color": [60, 120, 200]
     },
     "Carnegie": {
       "name": "Carnegie Mellon University",
-      "position": [610, 220],
+      "position": [580, 240],
       "color": [180, 120, 80]
     },
     "PolyMTL": {
       "name": "Polytechnique Montréal",
       "position": [750, 140],
       "color": [180, 120, 80]
+    },
+    "Carnegie": {
+      "name": "Carnegie Mellon University",
+      "position": [580, 240],
+      "color": [180, 120, 80]
     }
-
   },
   "routes": [
     {
