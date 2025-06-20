@@ -198,7 +198,11 @@ class GameWindow:
             action = panel.handle_click(pos, self.game_state, 
                                       available_cards=self.available_cards,
                                       cards_drawn_this_turn=self.cards_drawn_this_turn,
-                                      max_cards_per_turn=self.max_cards_per_turn)
+                                      max_cards_per_turn=self.max_cards_per_turn,
+                                      selected_route_idx=self.selected_route_idx,
+                                      mission_selection_active=self.mission_selection_active,
+                                      available_missions=self.available_missions,
+                                      selected_missions=self.selected_missions)
             if action:
                 self.handle_panel_action(action)
                 return
@@ -208,6 +212,10 @@ class GameWindow:
         # Update hovered route from map panel
         hover_info = self.panels['map'].handle_hover(pos, self.game_state)
         self.hovered_route_idx = hover_info
+        
+        # Handle sidebar button hover effects
+        if self.panels['sidebar'].rect.collidepoint(pos):
+            self.panels['sidebar'].handle_mouse_motion(pos)
         
     def handle_panel_action(self, action: str):
         """Handle actions returned by panels"""
@@ -220,6 +228,14 @@ class GameWindow:
             self.draw_specific_card(card_idx)
         elif action == "draw_missions":
             self.draw_missions()
+        elif action == "claim_route":
+            self.handle_claim_route()
+        elif action == "end_turn":
+            self.end_turn()
+        elif action == "confirm_mission_selection":
+            self.confirm_mission_selection()
+        elif action == "cancel_mission_selection":
+            self.cancel_mission_selection()
             
     def draw_specific_card(self, card_idx: int):
         """Handle drawing a specific card with animation"""
@@ -366,11 +382,18 @@ class GameWindow:
             return
             
         route = self.game_state.routes[self.selected_route_idx]
-        gate_type = route['gate']
+        gate_type_str = route['gate']
         required_cards = route['length']
         
+        # Convert string to GateType enum
+        from ..game import GateType
+        gate_type = GateType(gate_type_str)
+        
         if current_player.hand.get(gate_type, 0) >= required_cards:
-            current_player.claim_route(self.selected_route_idx, required_cards, gate_type)
+            # Create route ID string
+            route_id = f"{route['from']}-{route['to']}-{gate_type_str}"
+            
+            current_player.claim_route(gate_type, required_cards, route_id)
             route['claimed_by'] = current_player.name
             
             if self.audio_manager:
@@ -379,7 +402,7 @@ class GameWindow:
             print(f"Claimed route: {route['from']} -> {route['to']}")
             self.selected_route_idx = None
         else:
-            print(f"Not enough {gate_type.value} cards!")
+            print(f"Not enough {gate_type_str} cards!")
     
     def end_turn(self):
         """End current player's turn"""

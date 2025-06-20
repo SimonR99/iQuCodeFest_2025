@@ -8,6 +8,8 @@ class SidebarPanel(BasePanel):
     def __init__(self, rect: pygame.Rect, colors: Dict[str, Any], fonts: Dict[str, pygame.font.Font]):
         super().__init__(rect, colors, fonts)
         self.info_panel_color = tuple(colors['ui_colors']['info_panel']['rgb'])
+        self.action_buttons = []  # List of (rect, action, enabled) tuples
+        self.hovered_button = None
         
     def draw(self, surface: pygame.Surface, game_state, **kwargs):
         """Draw the sidebar panel with detailed sections like the original"""
@@ -61,17 +63,11 @@ class SidebarPanel(BasePanel):
             no_mission_height = self._draw_no_missions_section(surface, y_offset)
             y_offset += no_mission_height + 20
         
-        # Turn Actions Section
-        turn_actions = [
-            f"Cards drawn: {cards_drawn_this_turn}/{max_cards_per_turn}",
-            "",
-            "Available Actions:",
-            "• Draw gate cards (2 max)" if cards_drawn_this_turn < max_cards_per_turn else "• Cards limit reached",
-            "• Draw mission cards (M)" if cards_drawn_this_turn == 0 else "• Can't draw missions",
-            "• Claim selected route" if selected_route_idx is not None else "• Select a route first",
-        ]
-        
-        turn_section_height = self._draw_sidebar_section(surface, y_offset, "TURN ACTIONS", turn_actions)
+        # Turn Actions Section with buttons
+        self.action_buttons = []  # Reset buttons
+        turn_section_height = self._draw_turn_actions_section(surface, y_offset, current_player, 
+                                                            cards_drawn_this_turn, max_cards_per_turn, 
+                                                            selected_route_idx, mission_selection_active)
         y_offset += turn_section_height + 20
         
         # Selected Route Section
@@ -359,15 +355,177 @@ class SidebarPanel(BasePanel):
             
             y_offset += card_height + card_spacing
         
-        # Draw control instructions
+        # Draw control instructions and buttons
         y_offset += 10
         instructions = [
             "Click cards to select/deselect",
-            "Press ENTER to confirm",
-            "Press ESC to cancel"
+            f"Selected: {len(selected_missions)} (need at least 1)"
         ]
         
         for instruction in instructions:
             text = self.fonts['small_font'].render(instruction, True, self.accent_color)
             surface.blit(text, (self.rect.x + 15, self.rect.y + y_offset))
-            y_offset += 18 
+            y_offset += 18
+        
+        # Draw confirmation buttons
+        button_y = self.rect.bottom - 80
+        confirm_enabled = len(selected_missions) > 0
+        
+        # Confirm button
+        confirm_rect = pygame.Rect(self.rect.x + 15, button_y, 100, 30)
+        confirm_bg = (60, 120, 60) if confirm_enabled else (60, 60, 60)
+        confirm_text_color = (255, 255, 255) if confirm_enabled else (120, 120, 120)
+        
+        pygame.draw.rect(surface, confirm_bg, confirm_rect)
+        pygame.draw.rect(surface, self.border_color, confirm_rect, 2)
+        
+        confirm_text = self.fonts['small_font'].render("Confirm", True, confirm_text_color)
+        confirm_text_rect = confirm_text.get_rect(center=confirm_rect.center)
+        surface.blit(confirm_text, confirm_text_rect)
+        
+        # Cancel button
+        cancel_rect = pygame.Rect(self.rect.x + 125, button_y, 80, 30)
+        cancel_bg = (120, 60, 60)
+        
+        pygame.draw.rect(surface, cancel_bg, cancel_rect)
+        pygame.draw.rect(surface, self.border_color, cancel_rect, 2)
+        
+        cancel_text = self.fonts['small_font'].render("Cancel", True, (255, 255, 255))
+        cancel_text_rect = cancel_text.get_rect(center=cancel_rect.center)
+        surface.blit(cancel_text, cancel_text_rect)
+    
+    def _draw_turn_actions_section(self, surface: pygame.Surface, y_start: int, current_player, 
+                                 cards_drawn_this_turn: int, max_cards_per_turn: int, 
+                                 selected_route_idx: Optional[int], mission_selection_active: bool) -> int:
+        """Draw the turn actions section with clickable buttons. Returns height used."""
+        section_x = self.rect.x + 10
+        section_width = self.rect.width - 20
+        
+        # Draw section title
+        title_height = 25
+        title_rect = pygame.Rect(section_x, self.rect.y + y_start, section_width, title_height)
+        pygame.draw.rect(surface, self.accent_color, title_rect)
+        pygame.draw.rect(surface, self.border_color, title_rect, 1)
+        
+        title_text = self.fonts['font'].render("TURN ACTIONS", True, (255, 255, 255))
+        title_text_rect = title_text.get_rect(center=title_rect.center)
+        surface.blit(title_text, title_text_rect)
+        
+        # Status info
+        content_y = y_start + title_height + 10
+        status_text = f"Cards drawn: {cards_drawn_this_turn}/{max_cards_per_turn}"
+        status_surface = self.fonts['small_font'].render(status_text, True, self.text_color)
+        surface.blit(status_surface, (section_x + 5, self.rect.y + content_y))
+        content_y += 25
+        
+        button_height = 30
+        button_spacing = 8
+        button_width = section_width - 10
+        
+        # Define buttons based on game state
+        buttons = []
+        
+        # Draw mission cards button
+        can_draw_missions = cards_drawn_this_turn == 0 and not mission_selection_active
+        buttons.append({
+            'text': 'Draw Mission Cards',
+            'action': 'draw_missions',
+            'enabled': can_draw_missions,
+            'tooltip': 'Draw 3 mission cards to choose from' if can_draw_missions else 'Cannot draw missions after drawing cards'
+        })
+        
+        # Claim route button
+        can_claim_route = selected_route_idx is not None and cards_drawn_this_turn == 0
+        route_text = "Claim Selected Route"
+        if selected_route_idx is not None:
+            # Show route info in button
+            from ...game.game_state import GameState
+            if hasattr(current_player, 'game_state'):
+                route = current_player.game_state.routes[selected_route_idx]
+                route_text = f"Claim Route ({route['gate']}×{route['length']})"
+        
+        buttons.append({
+            'text': route_text,
+            'action': 'claim_route',
+            'enabled': can_claim_route,
+            'tooltip': 'Claim the selected route' if can_claim_route else 'Select a route first'
+        })
+        
+        # End turn button
+        buttons.append({
+            'text': 'End Turn',
+            'action': 'end_turn',
+            'enabled': True,
+            'tooltip': 'End your turn'
+        })
+        
+        # Draw buttons
+        for button in buttons:
+            button_rect = pygame.Rect(section_x + 5, self.rect.y + content_y, button_width, button_height)
+            
+            # Determine button colors
+            if button['enabled']:
+                if self.hovered_button == button['action']:
+                    bg_color = (80, 120, 160)  # Lighter blue when hovered
+                    text_color = (255, 255, 255)
+                else:
+                    bg_color = (60, 100, 140)  # Normal button color
+                    text_color = (255, 255, 255)
+                border_color = (100, 140, 180)
+            else:
+                bg_color = (60, 60, 60)  # Disabled gray
+                text_color = (120, 120, 120)
+                border_color = (80, 80, 80)
+            
+            # Draw button
+            pygame.draw.rect(surface, bg_color, button_rect)
+            pygame.draw.rect(surface, border_color, button_rect, 2)
+            
+            # Draw button text
+            text_surface = self.fonts['small_font'].render(button['text'], True, text_color)
+            text_rect = text_surface.get_rect(center=button_rect.center)
+            surface.blit(text_surface, text_rect)
+            
+            # Store button for click detection
+            if button['enabled']:
+                self.action_buttons.append((button_rect, button['action'], True))
+            
+            content_y += button_height + button_spacing
+        
+        total_height = title_height + 35 + len(buttons) * (button_height + button_spacing)
+        return total_height
+    
+    def _handle_click_internal(self, pos: Tuple[int, int], game_state, **kwargs) -> Optional[str]:
+        """Handle clicks on action buttons"""
+        # Check mission selection buttons if active
+        mission_selection_active = kwargs.get('mission_selection_active', False)
+        if mission_selection_active:
+            available_missions = kwargs.get('available_missions', [])
+            selected_missions = kwargs.get('selected_missions', [])
+            
+            # Mission selection confirmation buttons
+            # Add confirmation buttons at the bottom of mission selection
+            if mission_selection_active:
+                confirm_y = self.rect.bottom - 80
+                confirm_button_rect = pygame.Rect(self.rect.x + 15, confirm_y, 100, 30)
+                cancel_button_rect = pygame.Rect(self.rect.x + 125, confirm_y, 80, 30)
+                
+                if confirm_button_rect.collidepoint(pos):
+                    return 'confirm_mission_selection'
+                elif cancel_button_rect.collidepoint(pos):
+                    return 'cancel_mission_selection'
+        
+        # Check action buttons
+        for button_rect, action, enabled in self.action_buttons:
+            if enabled and button_rect.collidepoint(pos):
+                return action
+        
+        return None
+    
+    def handle_mouse_motion(self, pos: Tuple[int, int]):
+        """Handle mouse motion for button hover effects"""
+        self.hovered_button = None
+        for button_rect, action, enabled in self.action_buttons:
+            if enabled and button_rect.collidepoint(pos):
+                self.hovered_button = action
+                break 

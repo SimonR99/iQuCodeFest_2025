@@ -84,14 +84,14 @@ class MapRenderer:
         return scaled_positions
     
     def draw_route(self, surface: pygame.Surface, start_pos: Tuple[int, int], 
-                   end_pos: Tuple[int, int], route_data: Dict, offset: int = 0, highlighted: bool = False):
+                   end_pos: Tuple[int, int], route_data: Dict, offset: int = 0, highlighted: bool = False, player_color: Optional[Tuple[int, int, int]] = None):
         gate = route_data['gate']
         length = route_data['length']
         claimed_by = route_data.get('claimed_by')
         
-        # Get route color based on gate type or claim status
-        if claimed_by:
-            color = (150, 150, 150)  # Gray for claimed routes
+        # Get route color based on claim status
+        if claimed_by and player_color:
+            color = player_color  # Use player's color for claimed routes
         elif highlighted:
             color = (255, 255, 0)   # Yellow for highlighted routes
         else:
@@ -110,10 +110,11 @@ class MapRenderer:
                 end_pos = (int(end_pos[0] + perp_x), int(end_pos[1] + perp_y))
         
         # Draw route as individual train car segments (like Ticket to Ride)
-        self.draw_route_segments(surface, start_pos, end_pos, length, color, gate)
+        self.draw_route_segments(surface, start_pos, end_pos, length, color, gate, claimed_by, player_color)
         
     def draw_route_segments(self, surface: pygame.Surface, start_pos: Tuple[int, int], 
-                           end_pos: Tuple[int, int], length: int, color: Tuple[int, int, int], gate: str):
+                           end_pos: Tuple[int, int], length: int, color: Tuple[int, int, int], gate: str, 
+                           claimed_by: Optional[str] = None, player_color: Optional[Tuple[int, int, int]] = None):
         """Draw route as individual train car segments covering the full route distance"""
         # Calculate route direction and length
         dx = end_pos[0] - start_pos[0]
@@ -157,10 +158,11 @@ class MapRenderer:
             segment_end_y = current_y + unit_y * segment_length
             
             # Draw train car as rounded rectangle
+            # Show label only on first segment, but ownership circles on all segments
             self.draw_train_car(surface, 
                               (segment_start_x, segment_start_y), 
                               (segment_end_x, segment_end_y), 
-                              segment_width, color, gate, i == 0)
+                              segment_width, color, gate, i == 0, claimed_by, player_color)
             
             # Move to next segment position (including spacing)
             current_x += unit_x * (segment_length + segment_spacing)
@@ -168,7 +170,8 @@ class MapRenderer:
     
     def draw_train_car(self, surface: pygame.Surface, start_pos: Tuple[float, float], 
                        end_pos: Tuple[float, float], width: float, color: Tuple[int, int, int], 
-                       gate: str, show_label: bool = False):
+                       gate: str, show_label: bool = False, claimed_by: Optional[str] = None, 
+                       player_color: Optional[Tuple[int, int, int]] = None):
         """Draw an individual train car segment with optional image"""
         # Calculate perpendicular vector for width
         dx = end_pos[0] - start_pos[0]
@@ -236,18 +239,30 @@ class MapRenderer:
         
         # Draw gate label on first segment
         if show_label and self.font:
-            center_x = (start_pos[0] + end_pos[0]) / 2
-            center_y = (start_pos[1] + end_pos[1]) / 2
+            label_center_x = (start_pos[0] + end_pos[0]) / 2
+            label_center_y = (start_pos[1] + end_pos[1]) / 2
             
             # Use larger font for better visibility
             gate_text = self.font.render(gate, True, (0, 0, 0))
-            text_rect = gate_text.get_rect(center=(int(center_x), int(center_y)))
+            text_rect = gate_text.get_rect(center=(int(label_center_x), int(label_center_y)))
             
             # Draw background for better readability
             bg_rect = text_rect.inflate(4, 2)
             pygame.draw.rect(surface, (255, 255, 255, 200), bg_rect)
             
             surface.blit(gate_text, text_rect)
+        
+        # Draw player ownership circle if route is claimed (ALWAYS on top)
+        if claimed_by and player_color:
+            circle_center_x = int((start_pos[0] + end_pos[0]) / 2)
+            circle_center_y = int((start_pos[1] + end_pos[1]) / 2)
+            
+            # Draw player color circle with border - make it larger and more visible
+            circle_radius = 12
+            # Draw outer white border first for better visibility
+            pygame.draw.circle(surface, (255, 255, 255), (circle_center_x, circle_center_y), circle_radius + 2)
+            pygame.draw.circle(surface, player_color, (circle_center_x, circle_center_y), circle_radius)
+            pygame.draw.circle(surface, (0, 0, 0), (circle_center_x, circle_center_y), circle_radius, 2)
     
     def draw_university(self, surface: pygame.Surface, position: Tuple[int, int], 
                        uni_data: Dict, uni_id: str):
@@ -270,7 +285,7 @@ class MapRenderer:
             
             surface.blit(name_text, text_rect)
     
-    def draw_map(self, surface: pygame.Surface, map_rect: pygame.Rect, highlighted_route_idx: Optional[int] = None):
+    def draw_map(self, surface: pygame.Surface, map_rect: pygame.Rect, highlighted_route_idx: Optional[int] = None, game_state=None):
         if not self.font:
             self.initialize_font()
             
@@ -312,10 +327,14 @@ class MapRenderer:
                     route = routes_group[0]
                     route_idx = route_to_index[id(route)]
                     highlighted = (highlighted_route_idx == route_idx)
+                    # Get player color if route is claimed
+                    player_color = None
+                    if route.get('claimed_by'):
+                        player_color = self.get_player_color(route['claimed_by'], game_state)
                     # Make sure we draw in the correct direction
                     if route['from'] != uni1:
                         start_pos, end_pos = end_pos, start_pos
-                    self.draw_route(surface, start_pos, end_pos, route, 0, highlighted)
+                    self.draw_route(surface, start_pos, end_pos, route, 0, highlighted, player_color)
                 else:
                     # Multiple routes - draw them parallel
                     offset_distance = 25  # Distance between parallel routes (increased for visibility)
@@ -325,12 +344,16 @@ class MapRenderer:
                     for i, route in enumerate(routes_group):
                         route_idx = route_to_index[id(route)]
                         highlighted = (highlighted_route_idx == route_idx)
+                        # Get player color if route is claimed
+                        player_color = None
+                        if route.get('claimed_by'):
+                            player_color = self.get_player_color(route['claimed_by'], game_state)
                         offset = start_offset + i * offset_distance
                         # Make sure we draw in the correct direction
                         route_start, route_end = start_pos, end_pos
                         if route['from'] != uni1:
                             route_start, route_end = route_end, route_start
-                        self.draw_route(surface, route_start, route_end, route, int(offset), highlighted)
+                        self.draw_route(surface, route_start, route_end, route, int(offset), highlighted, player_color)
         
         # Draw universities on top of routes
         for uni_id, uni_data in self.universities.items():
@@ -358,20 +381,68 @@ class MapRenderer:
         scaled_positions = self.scale_positions(map_rect)
         click_tolerance = 15  # How close to route line to register click
         
+        # Use absolute mouse position (don't convert to relative)
+        absolute_pos = mouse_pos
+        
+        # Group routes by city pairs to handle parallel routes (same as in draw_map)
+        route_groups = {}
+        route_to_index = {}
         for i, route in enumerate(self.routes):
             from_uni = route['from']
             to_uni = route['to']
             
-            if from_uni in scaled_positions and to_uni in scaled_positions:
-                start_pos = scaled_positions[from_uni]
-                end_pos = scaled_positions[to_uni]
+            # Create a consistent key regardless of direction
+            key = tuple(sorted([from_uni, to_uni]))
+            if key not in route_groups:
+                route_groups[key] = []
+            route_groups[key].append(route)
+            route_to_index[id(route)] = i
+        
+        # Check each route group
+        for (uni1, uni2), routes_group in route_groups.items():
+            if uni1 in scaled_positions and uni2 in scaled_positions:
+                base_start_pos = scaled_positions[uni1]
+                base_end_pos = scaled_positions[uni2]
                 
-                # Calculate distance from point to line segment
-                distance = self._point_to_line_distance(mouse_pos, start_pos, end_pos)
-                
-                if distance <= click_tolerance:
-                    return i
+                # If there's only one route, test normally
+                if len(routes_group) == 1:
+                    route = routes_group[0]
+                    # Adjust for route direction
+                    start_pos, end_pos = base_start_pos, base_end_pos
+                    if route['from'] != uni1:
+                        start_pos, end_pos = end_pos, start_pos
                     
+                    distance = self._point_to_line_distance(absolute_pos, start_pos, end_pos)
+                    if distance <= click_tolerance:
+                        return route_to_index[id(route)]
+                else:
+                    # Multiple routes - test each with its offset
+                    offset_distance = 25
+                    total_width = (len(routes_group) - 1) * offset_distance
+                    start_offset = -total_width / 2
+                    
+                    for i, route in enumerate(routes_group):
+                        offset = start_offset + i * offset_distance
+                        
+                        # Calculate offset positions
+                        route_start, route_end = base_start_pos, base_end_pos
+                        if route['from'] != uni1:
+                            route_start, route_end = route_end, route_start
+                        
+                        # Apply perpendicular offset
+                        dx = route_end[0] - route_start[0]
+                        dy = route_end[1] - route_start[1]
+                        length_route = math.sqrt(dx*dx + dy*dy)
+                        if length_route > 0:
+                            perp_x = -dy / length_route * offset
+                            perp_y = dx / length_route * offset
+                            offset_start = (int(route_start[0] + perp_x), int(route_start[1] + perp_y))
+                            offset_end = (int(route_end[0] + perp_x), int(route_end[1] + perp_y))
+                            
+                            distance = self._point_to_line_distance(absolute_pos, offset_start, offset_end)
+                            if distance <= click_tolerance:
+                                return route_to_index[id(route)]
+        
         return None
     
     def _point_to_line_distance(self, point: Tuple[int, int], 
@@ -409,3 +480,11 @@ class MapRenderer:
         else:
             # Fallback to map_settings if colors.json not available
             return tuple(self.map_settings.get('gate_colors', {}).get(gate, [255, 255, 255]))
+    
+    def get_player_color(self, player_name: str, game_state) -> Optional[Tuple[int, int, int]]:
+        """Get player color by player name"""
+        if game_state and hasattr(game_state, 'players'):
+            for player in game_state.players:
+                if player.name == player_name:
+                    return player.color
+        return None

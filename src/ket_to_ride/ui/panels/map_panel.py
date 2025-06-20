@@ -49,7 +49,7 @@ class MapPanel(BasePanel):
         
         # Show selected route or hovered route
         highlight_route = selected_route_idx if selected_route_idx is not None else hovered_route_idx
-        self.map_renderer.draw_map(surface, self.rect, highlight_route)
+        self.map_renderer.draw_map(surface, self.rect, highlight_route, game_state)
         
     def _handle_click_internal(self, pos: Tuple[int, int], game_state, **kwargs) -> Optional[str]:
         """Handle clicks on the map"""
