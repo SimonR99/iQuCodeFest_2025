@@ -1,0 +1,7 @@
+{
+  "num_missions": 10,
+  "allow_double_target": true,
+  "allow_triple_target": true,
+  "points_per_step": 2,
+  "base_points": 5
+} 

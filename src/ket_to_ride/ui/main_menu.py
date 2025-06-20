@@ -3,6 +3,7 @@ import sys
 import os
 from typing import Optional
 from .game_window import GameWindow
+from .audio_manager import AudioManager
 
 class MainMenu:
     def __init__(self, width: int = 1280, height: int = 720):
@@ -11,6 +12,9 @@ class MainMenu:
         self.screen: Optional[pygame.Surface] = None
         self.clock = pygame.time.Clock()
         self.running = False
+        
+        # Initialize audio manager
+        self.audio_manager = AudioManager()
         
         # Colors (earth tones matching topographic map)
         self.BACKGROUND_COLOR = (45, 52, 48)        # Dark forest green
@@ -36,15 +40,26 @@ class MainMenu:
         
     def initialize(self) -> bool:
         pygame.init()
-        self.screen = pygame.display.set_mode((self.width, self.height))
-        pygame.display.set_caption("|ket> to ride - Main Menu")
+        self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
+        pygame.display.set_caption("|ket⟩ to Ride - Main Menu")
         
-        # Initialize fonts
-        pygame.font.init()
-        self.title_font = pygame.font.Font(None, 76)
-        self.subtitle_font = pygame.font.Font(None, 36)
-        self.button_font = pygame.font.Font(None, 42)
-        self.small_font = pygame.font.Font(None, 24)
+        # Load font
+        font_path = os.path.join("assets", "fonts", "DejaVuSans.ttf")
+        try:
+            self.title_font = pygame.font.Font(font_path, 68)
+            self.subtitle_font = pygame.font.Font(font_path, 32)
+            self.button_font = pygame.font.Font(font_path, 30)
+            self.small_font = pygame.font.Font(font_path, 20)
+            print("Successfully loaded custom font for main menu.")
+        except FileNotFoundError:
+            print(f"Custom font not found at {font_path}. Using default font for main menu.")
+            self.title_font = pygame.font.Font(None, 68)
+            self.subtitle_font = pygame.font.Font(None, 32)
+            self.button_font = pygame.font.Font(None, 30)
+            self.small_font = pygame.font.Font(None, 20)
+        
+        # Start background music
+        self.audio_manager.play_background_music()
         
         return True
         
@@ -66,20 +81,25 @@ class MainMenu:
     def handle_events(self) -> Optional[str]:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                return "exit"
+                self.running = False
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    return "exit"
+                    self.running = False
                 elif event.key == pygame.K_UP:
                     self.selected_button = (self.selected_button - 1) % len(self.buttons)
+                    while not self.buttons[self.selected_button]["enabled"]:
+                        self.selected_button = (self.selected_button - 1) % len(self.buttons)
                 elif event.key == pygame.K_DOWN:
                     self.selected_button = (self.selected_button + 1) % len(self.buttons)
+                    while not self.buttons[self.selected_button]["enabled"]:
+                        self.selected_button = (self.selected_button + 1) % len(self.buttons)
                 elif event.key == pygame.K_RETURN:
-                    if self.buttons[self.selected_button]["enabled"]:
-                        return self.buttons[self.selected_button]["action"]
+                    return self.buttons[self.selected_button]["action"]
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 if event.button == 1:  # Left click
-                    return self.handle_mouse_click(event.pos)
+                    action = self.handle_mouse_click(event.pos)
+                    if action:
+                        return action
             elif event.type == pygame.MOUSEMOTION:
                 self.handle_mouse_hover(event.pos)
                 
@@ -134,12 +154,12 @@ class MainMenu:
             self.screen.fill(self.BACKGROUND_COLOR)
         
         # Draw title
-        title_text = self.title_font.render("|ket> to ride", True, self.TITLE_COLOR)
+        title_text = self.title_font.render("|ket⟩ to Ride", True, self.TITLE_COLOR)
         title_rect = title_text.get_rect(center=(self.width // 2, self.height // 5))
         self.screen.blit(title_text, title_rect)
         
         # Draw subtitle
-        subtitle_text = self.subtitle_font.render("Quantum Train Adventure", True, self.TITLE_COLOR)
+        subtitle_text = self.subtitle_font.render("A Quantum Computing Adventure", True, self.TITLE_COLOR)
         subtitle_rect = subtitle_text.get_rect(center=(self.width // 2, self.height // 5 + 80))
         self.screen.blit(subtitle_text, subtitle_rect)
         
@@ -208,8 +228,7 @@ class MainMenu:
             action = self.handle_events()
             if action:
                 if action == "local":
-                    pygame.quit()
-                    # Launch the game
+                    # Launch the game without quitting pygame
                     game_window = GameWindow()
                     game_window.run()
                     return "local"
@@ -225,4 +244,5 @@ class MainMenu:
             self.clock.tick(60)
             
         pygame.quit()
+        self.audio_manager.cleanup()
         return None

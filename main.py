@@ -1,7 +1,7 @@
 from src.ket_to_ride.ui.main_menu import MainMenu
 
 def main():
-    print("Starting Ket-to-Ride...")
+    print("Starting |ket> to ride...")
     main_menu = MainMenu()
     main_menu.run()
 

@@ -1,4 +1,4 @@
-# Ket-to-Ride
+# |ket> to ride
 
 ## Setup & Installation
 
@@ -10,7 +10,7 @@
 
 ## Running the Game
 
-To start Ket-to-Ride with the Pygame interface:
+To start |ket> to ride with the Pygame interface:
 ```bash
 python main.py
 ```

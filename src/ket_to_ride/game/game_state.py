@@ -3,6 +3,7 @@ import json
 from typing import Dict, List, Optional, Tuple
 from .player import Player, GateType, MissionCard
 from ..quantum import CircuitSimulator
+import os
 
 class GameState:
     def __init__(self, config_path: str):
@@ -59,44 +60,92 @@ class GameState:
         random.shuffle(self.deck)
         
     def initialize_missions(self):
-        # Create diverse mission cards with 1-3 start cities
+        # Load mission generation config
+        config_path = os.path.join(os.path.dirname(__file__), '../../..', 'config', 'missions_config.json')
+        try:
+            with open(config_path, 'r') as f:
+                mission_cfg = json.load(f)
+        except Exception as e:
+            print(f"Error loading missions config: {e}")
+            mission_cfg = {
+                "num_missions": 10,
+                "allow_double_target": True,
+                "allow_triple_target": True,
+                "points_per_step": 2,
+                "base_points": 5
+            }
+        num_missions = mission_cfg.get("num_missions", 10)
+        allow_double = mission_cfg.get("allow_double_target", True)
+        allow_triple = mission_cfg.get("allow_triple_target", True)
+        points_per_step = mission_cfg.get("points_per_step", 2)
+        base_points = mission_cfg.get("base_points", 5)
+
         cities = list(self.universities.keys())
         self.mission_deck = []
-        
-        # Single start city missions (easier, lower points)
-        single_start_missions = [
-            (["MIT"], "Oxford", "|0⟩", "|1⟩", 12),
-            (["Stanford"], "Cambridge", "|0⟩", "|1⟩", 10),
-            (["Harvard"], "ETH", "|1⟩", "|0⟩", 8),
-            (["Berkeley"], "Princeton", "|0⟩", "|1⟩", 9),
-            (["Caltech"], "Chicago", "|1⟩", "|1⟩", 6),
-        ]
-        
-        # Double start city missions (medium difficulty)
-        double_start_missions = [
-            (["MIT", "Harvard"], "Oxford", "|0⟩", "|1⟩", 18),
-            (["Stanford", "Berkeley"], "Cambridge", "|1⟩", "|0⟩", 16),
-            (["Caltech", "Chicago"], "ETH", "|0⟩", "|1⟩", 14),
-            (["Princeton", "Harvard"], "Stanford", "|1⟩", "|1⟩", 15),
-        ]
-        
-        # Triple start city missions (hardest, highest points)
-        triple_start_missions = [
-            (["MIT", "Harvard", "Princeton"], "Oxford", "|0⟩", "|1⟩", 25),
-            (["Stanford", "Berkeley", "Caltech"], "Cambridge", "|1⟩", "|0⟩", 22),
-            (["MIT", "Stanford", "Chicago"], "ETH", "|0⟩", "|0⟩", 20),
-        ]
-        
-        all_missions = single_start_missions + double_start_missions + triple_start_missions
-        
-        for start_cities, target, init_state, target_state, points in all_missions:
-            # Check if all cities exist
-            if target in cities and all(city in cities for city in start_cities):
-                self.mission_deck.append(
-                    MissionCard(start_cities, target, init_state, target_state, points)
-                )
-                
+        attempts = 0
+        max_attempts = num_missions * 10
+        used_pairs = set()
+        state_choices = ["|0⟩", "|1⟩"]
+        while len(self.mission_deck) < num_missions and attempts < max_attempts:
+            attempts += 1
+            # Decide number of start cities
+            n_start = 1
+            if allow_triple and random.random() < 0.2:
+                n_start = 3
+            elif allow_double and random.random() < 0.3:
+                n_start = 2
+            # Pick unique start cities
+            start_cities = random.sample(cities, n_start)
+            # Pick a target city not in start_cities
+            possible_targets = [c for c in cities if c not in start_cities]
+            if not possible_targets:
+                continue
+            target = random.choice(possible_targets)
+            # Avoid duplicate missions
+            key = (tuple(sorted(start_cities)), target)
+            if key in used_pairs:
+                continue
+            # Find shortest path from any start to target
+            min_path_len = None
+            for start in start_cities:
+                path_len = self._shortest_path_length(start, target)
+                if path_len is not None:
+                    if min_path_len is None or path_len < min_path_len:
+                        min_path_len = path_len
+            if min_path_len is None:
+                continue  # No path exists
+            # Assign points
+            points = base_points + points_per_step * min_path_len
+            # Randomly pick initial and target quantum state
+            init_state = random.choice(state_choices)
+            target_state = random.choice(state_choices)
+            # Add mission
+            self.mission_deck.append(MissionCard(start_cities, target, init_state, target_state, points))
+            used_pairs.add(key)
         random.shuffle(self.mission_deck)
+
+    def _shortest_path_length(self, start: str, target: str) -> Optional[int]:
+        # BFS for shortest path (by number of routes)
+        if start == target:
+            return 0
+        visited = set()
+        queue = [(start, 0)]
+        while queue:
+            current, dist = queue.pop(0)
+            if current == target:
+                return dist
+            if current in visited:
+                continue
+            visited.add(current)
+            for route in self.routes:
+                next_city = None
+                if route['from'] == current:
+                    next_city = route['to']
+                elif route['to'] == current:
+                    next_city = route['from']
+                if next_city and next_city not in visited:
+                    queue.append((next_city, dist + 1))
+        return None
         
     def add_player(self, name: str, color: Tuple[int, int, int]) -> Player:
         player_id = f"player_{len(self.players) + 1}"

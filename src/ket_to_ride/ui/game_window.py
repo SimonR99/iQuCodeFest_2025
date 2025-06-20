@@ -100,14 +100,17 @@ class GameWindow:
     def initialize(self) -> bool:
         pygame.init()
         self.screen = pygame.display.set_mode((self.width, self.height), pygame.RESIZABLE)
-        pygame.display.set_caption("|ket> to ride")
+        pygame.display.set_caption("|ket⟩ to Ride")
         
-        # Initialize font (increased sizes for better readability)
+        # Initialize font
         pygame.font.init()
-        self.font = pygame.font.Font(None, 28)
-        self.title_font = pygame.font.Font(None, 42)
-        self.small_font = pygame.font.Font(None, 22)
-        self.large_font = pygame.font.Font(None, 32)
+        font_path = os.path.join("assets", "fonts", "DejaVuSans.ttf")
+        
+        # Load custom font directly, with smaller sizes.
+        self.font = pygame.font.Font(font_path, 22)
+        self.title_font = pygame.font.Font(font_path, 34)
+        self.small_font = pygame.font.Font(font_path, 18)
+        self.large_font = pygame.font.Font(font_path, 26)
         
         # Initialize card renderer with fonts
         fonts = {
@@ -620,9 +623,9 @@ class GameWindow:
         pygame.draw.rect(self.screen, self.ACCENT_COLOR, title_rect_bg)
         
         # Draw title (centered and properly sized)
-        title_text = self.large_font.render("|ket> to ride", True, self.TEXT_COLOR)
-        title_rect = title_text.get_rect(center=(title_rect_bg.centerx, title_rect_bg.centery))
-        self.screen.blit(title_text, title_rect)
+        title_text = self.large_font.render("|ket⟩ to Ride", True, self.TEXT_COLOR)
+        title_rect_text = title_text.get_rect(center=(title_rect_bg.centerx, title_rect_bg.centery))
+        self.screen.blit(title_text, title_rect_text)
         
         current_player = self.game_state.get_current_player()
         if not current_player:
@@ -774,6 +777,7 @@ class GameWindow:
         pygame.display.flip()
     
     def run(self) -> None:
+        """Main game loop"""
         if not self.initialize():
             return
         
@@ -781,12 +785,12 @@ class GameWindow:
         
         while self.running:
             self.handle_events()
-            self.update_animations()  # Update animations
+            self.update_animations()
             self.draw()
             self.clock.tick(60)
-        
-        pygame.quit()
-        sys.exit()
+            
+        # Don't quit pygame here - let the main menu handle it
+        # pygame.quit()
 
     def update_animations(self):
         """Update and complete animations"""
