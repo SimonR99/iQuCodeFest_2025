@@ -301,7 +301,7 @@ class GameState:
                     return True
         return False
         
-    def claim_route(self, player: Player, route_idx: int, selected_gate: str = None) -> bool:
+    def claim_route(self, player: Player, route_idx: int, selected_gate: str = None, gate_index: int = None) -> bool:
         if not self.can_claim_route(player, route_idx, selected_gate):
             return False
             
@@ -331,9 +331,25 @@ class GameState:
         
         if selected_gate is None or selected_gate not in gates:
             return False
+        
+        # If gate_index is provided, verify it's valid and corresponds to the selected gate
+        if gate_index is not None:
+            if gate_index >= len(gates) or gates[gate_index] != selected_gate:
+                print(f"Invalid gate index {gate_index} for gate {selected_gate}")
+                return False
+        else:
+            # If no gate_index provided, use the first occurrence of the gate
+            gate_index = gates.index(selected_gate)
             
         gate_type = GateType(selected_gate)
-        route_id = f"{route['from']}-{route['to']}-{selected_gate}"
+        
+        # Create unique route ID that includes the gate index for identical gates
+        if gates.count(selected_gate) > 1:
+            # If there are multiple identical gates, include the index to make it unique
+            route_id = f"{route['from']}-{route['to']}-{selected_gate}-{gate_index}"
+        else:
+            # Single gate or unique gate, use the standard format
+            route_id = f"{route['from']}-{route['to']}-{selected_gate}"
         
         if player.claim_route(gate_type, length, route_id):
             # Update the claimed_by structure for individual gates
@@ -501,7 +517,23 @@ class GameState:
         # Calculate final scores
         for player in self.players:
             # Points from routes (1 point per route segment)
-            route_points = sum(len(route.split('-')) for route in player.claimed_routes)
+            route_points = 0
+            for route_id in player.claimed_routes:
+                # Parse route ID to get route length
+                # Format: "from-to-gate" or "from-to-gate-index"
+                parts = route_id.split('-')
+                if len(parts) >= 3:
+                    # Find the route to get its length
+                    from_city = parts[0]
+                    to_city = parts[1]
+                    gate = parts[2]
+                    
+                    # Find the route in the routes list
+                    for route in self.routes:
+                        if (route['from'] == from_city and route['to'] == to_city) or \
+                           (route['from'] == to_city and route['to'] == from_city):
+                            route_points += route['length']
+                            break
             
             # Mission points
             mission_points = 0

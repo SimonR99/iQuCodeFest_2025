@@ -29,6 +29,7 @@ class GameWindow:
         # Game state
         self.selected_route_idx = None
         self.selected_gate = None  # Store which specific gate is selected
+        self.selected_gate_index = None  # Store which specific gate instance is selected
         self.hovered_route_idx = None
         self.available_cards = []
         self.cards_drawn_this_turn = 0
@@ -268,9 +269,11 @@ class GameWindow:
             parts = action.split(":")
             route_idx = int(parts[1])
             selected_gate = parts[2] if len(parts) > 2 else None
+            gate_index = int(parts[3]) if len(parts) > 3 else 0
             self.selected_route_idx = route_idx
             self.selected_gate = selected_gate
-            print(f"Selected route: {self.game_state.routes[route_idx]} with gate: {selected_gate}")
+            self.selected_gate_index = gate_index  # Store the gate index
+            print(f"Selected route: {self.game_state.routes[route_idx]} with gate: {selected_gate} (index: {gate_index})")
         elif action.startswith("draw_card:"):
             card_idx = int(action.split(":")[1])
             self.draw_specific_card(card_idx)
@@ -466,13 +469,15 @@ class GameWindow:
             return
         
         # Use the game state's claim_route method which handles the new format
-        if self.game_state.claim_route(current_player, self.selected_route_idx, selected_gate):
+        # Pass the gate index to ensure we claim the correct instance
+        if self.game_state.claim_route(current_player, self.selected_route_idx, selected_gate, self.selected_gate_index):
             if self.audio_manager:
                 self.audio_manager.play_sound_effect("mouse_click")
             
-            print(f"Claimed route: {route['from']} -> {route['to']} with {selected_gate} gate")
+            print(f"Claimed route: {route['from']} -> {route['to']} with {selected_gate} gate (index: {self.selected_gate_index})")
             self.selected_route_idx = None
             self.selected_gate = None
+            self.selected_gate_index = None
         else:
             print("Failed to claim route")
     
@@ -481,6 +486,7 @@ class GameWindow:
         self.cards_drawn_this_turn = 0
         self.selected_route_idx = None
         self.selected_gate = None
+        self.selected_gate_index = None
         self.game_state.next_turn()
         print(f"Turn ended. Now {self.game_state.get_current_player().name}'s turn")
     
@@ -570,6 +576,7 @@ class GameWindow:
         panel_kwargs = {
             'selected_route_idx': self.selected_route_idx,
             'selected_gate': self.selected_gate,
+            'selected_gate_index': self.selected_gate_index,
             'hovered_route_idx': self.hovered_route_idx,
             'available_cards': self.available_cards,
             'cards_drawn_this_turn': self.cards_drawn_this_turn,
