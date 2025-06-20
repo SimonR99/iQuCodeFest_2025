@@ -13,8 +13,10 @@ class MapRenderer:
         self.font = None
         self.rail_images = {}  # Cache for rail images
         self.colors_config = None
+        self.university_sprite = None  # Cache for university node sprite
         self.load_config()
         self.load_rail_images()
+        self.load_university_sprite()
         
     def load_config(self):
         try:
@@ -46,6 +48,44 @@ class MapRenderer:
                         print(f"Could not load rail image {image_path}: {e}")
         except Exception as e:
             print(f"Could not load rail images config: {e}")
+    
+    def load_university_sprite(self):
+        """Load university node sprite from tilemap"""
+        try:
+            sprite_path = "assets/nodes/boutons uni vintage.png"
+            if os.path.exists(sprite_path):
+                # Load the full tilemap
+                full_tilemap = pygame.image.load(sprite_path)
+                
+                # Tilemap is 5 columns x 3 rows
+                # User wants row 3, column 2 (1-based), which is row 2, column 1 (0-based)
+                tilemap_width = full_tilemap.get_width()
+                tilemap_height = full_tilemap.get_height()
+                
+                sprite_width = tilemap_width // 5  # 5 columns
+                sprite_height = tilemap_height // 3  # 3 rows
+                
+                # Extract the specific sprite (row 2, column 1 in 0-based indexing)
+                target_row = 2  # Row 3 (1-based) = Row 2 (0-based)
+                target_col = 1  # Column 2 (1-based) = Column 1 (0-based)
+                
+                sprite_x = target_col * sprite_width
+                sprite_y = target_row * sprite_height
+                
+                # Create a surface for the extracted sprite
+                original_sprite = pygame.Surface((sprite_width, sprite_height), pygame.SRCALPHA)
+                sprite_rect = pygame.Rect(sprite_x, sprite_y, sprite_width, sprite_height)
+                original_sprite.blit(full_tilemap, (0, 0), sprite_rect)
+                
+                # Scale down the sprite to a more reasonable size
+                target_size = 48  # Much smaller size
+                self.university_sprite = pygame.transform.scale(original_sprite, (target_size, target_size))
+                
+                print(f"Loaded university sprite from tilemap: {sprite_width}x{sprite_height} at ({sprite_x}, {sprite_y}), scaled to {target_size}x{target_size}")
+            else:
+                print(f"University sprite not found: {sprite_path}")
+        except Exception as e:
+            print(f"Could not load university sprite: {e}")
     
     def initialize_font(self, size: int = None):
         if size is None:
@@ -85,7 +125,25 @@ class MapRenderer:
     
     def draw_route(self, surface: pygame.Surface, start_pos: Tuple[int, int], 
                    end_pos: Tuple[int, int], route_data: Dict, offset: int = 0, highlighted: bool = False, player_color: Optional[Tuple[int, int, int]] = None):
-        gate = route_data['gate']
+        # Handle both array and single gate formats
+        gates = route_data['gate']
+        if isinstance(gates, str):
+            gates = [gates]  # Convert single gate to array
+        
+        # Determine which gate to display
+        display_gate = None
+        claimed_with_gate = route_data.get('claimed_with_gate')
+        if claimed_with_gate:
+            # Show the gate that was used to claim this route
+            display_gate = claimed_with_gate
+        else:
+            # For parallel routes, we receive individual gates; for others, show combined
+            if len(gates) == 1:
+                display_gate = gates[0]
+            else:
+                # This should only happen for the main route display (not parallel sub-routes)
+                display_gate = "/".join(gates)
+        
         length = route_data['length']
         claimed_by = route_data.get('claimed_by')
         
@@ -95,7 +153,14 @@ class MapRenderer:
         elif highlighted:
             color = (255, 255, 0)   # Yellow for highlighted routes
         else:
-            color = self.get_gate_color(gate)
+            # For multiple gates, use a blended color or the first gate's color
+            if claimed_with_gate:
+                color = self.get_gate_color(claimed_with_gate)
+            elif len(gates) == 1:
+                color = self.get_gate_color(gates[0])
+            else:
+                # Blend colors for multiple gates or use a neutral color
+                color = (150, 150, 150)  # Gray for multiple unclaimed gates
         
         # Calculate perpendicular offset for parallel routes
         if offset != 0:
@@ -110,7 +175,7 @@ class MapRenderer:
                 end_pos = (int(end_pos[0] + perp_x), int(end_pos[1] + perp_y))
         
         # Draw route as individual train car segments (like Ticket to Ride)
-        self.draw_route_segments(surface, start_pos, end_pos, length, color, gate, claimed_by, player_color)
+        self.draw_route_segments(surface, start_pos, end_pos, length, color, display_gate, claimed_by, player_color)
         
     def draw_route_segments(self, surface: pygame.Surface, start_pos: Tuple[int, int], 
                            end_pos: Tuple[int, int], length: int, color: Tuple[int, int, int], gate: str, 
@@ -267,22 +332,37 @@ class MapRenderer:
     def draw_university(self, surface: pygame.Surface, position: Tuple[int, int], 
                        uni_data: Dict, uni_id: str):
         x, y = position
-        radius = self.map_settings.get('university_radius', 15)
-        color = uni_data.get('color', [100, 100, 100])
         
-        # Draw university circle
-        pygame.draw.circle(surface, color, (x, y), radius)
-        pygame.draw.circle(surface, (255, 255, 255), (x, y), radius, 2)
+        if self.university_sprite:
+            # Use the sprite image
+            sprite_width = self.university_sprite.get_width()
+            sprite_height = self.university_sprite.get_height()
+            
+            # Center the sprite on the position
+            sprite_x = x - sprite_width // 2
+            sprite_y = y - sprite_height // 2
+            
+            surface.blit(self.university_sprite, (sprite_x, sprite_y))
+            
+            # Use sprite dimensions for text positioning
+            text_y_offset = sprite_height // 2 + 8
+        else:
+            # Fallback to circle if sprite not loaded
+            radius = self.map_settings.get('university_radius', 15)
+            color = uni_data.get('color', [100, 100, 100])
+            
+            # Draw university circle
+            pygame.draw.circle(surface, color, (x, y), radius)
+            pygame.draw.circle(surface, (255, 255, 255), (x, y), radius, 2)
+            
+            text_y_offset = radius + 18
         
         # Draw university name
         if self.font:
             name_text = self.font.render(uni_id, True, (255, 255, 255))
-            text_rect = name_text.get_rect(center=(x, y + radius + 18))
+            text_rect = name_text.get_rect(center=(x, y + text_y_offset))
             
-            # Draw background for better readability
-            bg_rect = text_rect.inflate(6, 4)
-            pygame.draw.rect(surface, (0, 0, 0, 180), bg_rect)
-            
+            # Draw text directly without background for cleaner look
             surface.blit(name_text, text_rect)
     
     def draw_map(self, surface: pygame.Surface, map_rect: pygame.Rect, highlighted_route_idx: Optional[int] = None, game_state=None):
@@ -302,58 +382,42 @@ class MapRenderer:
         # Get scaled positions
         scaled_positions = self.scale_positions(map_rect)
         
-        # Group routes by city pairs to handle parallel routes
-        route_groups = {}
-        route_to_index = {}  # Map route to original index
+        # Draw routes first (so they appear behind universities)
         for i, route in enumerate(self.routes):
             from_uni = route['from']
             to_uni = route['to']
             
-            # Create a consistent key regardless of direction
-            key = tuple(sorted([from_uni, to_uni]))
-            if key not in route_groups:
-                route_groups[key] = []
-            route_groups[key].append(route)
-            route_to_index[id(route)] = i
-        
-        # Draw routes first (so they appear behind universities)
-        for (uni1, uni2), routes_group in route_groups.items():
-            if uni1 in scaled_positions and uni2 in scaled_positions:
-                start_pos = scaled_positions[uni1]
-                end_pos = scaled_positions[uni2]
+            if from_uni in scaled_positions and to_uni in scaled_positions:
+                start_pos = scaled_positions[from_uni]
+                end_pos = scaled_positions[to_uni]
                 
-                # If there's only one route, draw normally
-                if len(routes_group) == 1:
-                    route = routes_group[0]
-                    route_idx = route_to_index[id(route)]
-                    highlighted = (highlighted_route_idx == route_idx)
-                    # Get player color if route is claimed
-                    player_color = None
-                    if route.get('claimed_by'):
-                        player_color = self.get_player_color(route['claimed_by'], game_state)
-                    # Make sure we draw in the correct direction
-                    if route['from'] != uni1:
-                        start_pos, end_pos = end_pos, start_pos
-                    self.draw_route(surface, start_pos, end_pos, route, 0, highlighted, player_color)
-                else:
-                    # Multiple routes - draw them parallel
-                    offset_distance = 25  # Distance between parallel routes (increased for visibility)
-                    total_width = (len(routes_group) - 1) * offset_distance
+                highlighted = (highlighted_route_idx == i)
+                # Get player color if route is claimed
+                player_color = None
+                if route.get('claimed_by'):
+                    player_color = self.get_player_color(route['claimed_by'], game_state)
+                
+                # Handle both array and single gate formats for visual display
+                gates = route['gate']
+                if isinstance(gates, str):
+                    gates = [gates]  # Convert single gate to array
+                
+                # If route has multiple gates, draw them as parallel paths
+                if len(gates) > 1 and not route.get('claimed_by'):
+                    # Draw multiple parallel paths for unclaimed multi-gate routes
+                    offset_distance = 25  # Distance between parallel routes
+                    total_width = (len(gates) - 1) * offset_distance
                     start_offset = -total_width / 2
                     
-                    for i, route in enumerate(routes_group):
-                        route_idx = route_to_index[id(route)]
-                        highlighted = (highlighted_route_idx == route_idx)
-                        # Get player color if route is claimed
-                        player_color = None
-                        if route.get('claimed_by'):
-                            player_color = self.get_player_color(route['claimed_by'], game_state)
-                        offset = start_offset + i * offset_distance
-                        # Make sure we draw in the correct direction
-                        route_start, route_end = start_pos, end_pos
-                        if route['from'] != uni1:
-                            route_start, route_end = route_end, route_start
-                        self.draw_route(surface, route_start, route_end, route, int(offset), highlighted, player_color)
+                    for j, gate in enumerate(gates):
+                        offset = start_offset + j * offset_distance
+                        # Create a temporary route dict for each gate
+                        temp_route = route.copy()
+                        temp_route['gate'] = gate  # Single gate for this path
+                        self.draw_route(surface, start_pos, end_pos, temp_route, int(offset), highlighted, player_color)
+                else:
+                    # Single path for claimed routes or single-gate routes
+                    self.draw_route(surface, start_pos, end_pos, route, 0, highlighted, player_color)
         
         # Draw universities on top of routes
         for uni_id, uni_data in self.universities.items():
@@ -364,12 +428,26 @@ class MapRenderer:
     def get_university_at_position(self, map_rect: pygame.Rect, 
                                   mouse_pos: Tuple[int, int]) -> Optional[str]:
         scaled_positions = self.scale_positions(map_rect)
-        radius = self.map_settings.get('university_radius', 15)
         
         for uni_id, pos in scaled_positions.items():
-            distance = math.sqrt((mouse_pos[0] - pos[0])**2 + (mouse_pos[1] - pos[1])**2)
-            if distance <= radius:
-                return uni_id
+            if self.university_sprite:
+                # Use sprite dimensions for hit detection
+                sprite_width = self.university_sprite.get_width()
+                sprite_height = self.university_sprite.get_height()
+                
+                # Check if mouse is within sprite bounds
+                sprite_x = pos[0] - sprite_width // 2
+                sprite_y = pos[1] - sprite_height // 2
+                
+                if (sprite_x <= mouse_pos[0] <= sprite_x + sprite_width and
+                    sprite_y <= mouse_pos[1] <= sprite_y + sprite_height):
+                    return uni_id
+            else:
+                # Fallback to circular hit detection
+                radius = self.map_settings.get('university_radius', 15)
+                distance = math.sqrt((mouse_pos[0] - pos[0])**2 + (mouse_pos[1] - pos[1])**2)
+                if distance <= radius:
+                    return uni_id
         return None
     
     def get_route_at_position(self, map_rect: pygame.Rect, 
@@ -384,64 +462,48 @@ class MapRenderer:
         # Use absolute mouse position (don't convert to relative)
         absolute_pos = mouse_pos
         
-        # Group routes by city pairs to handle parallel routes (same as in draw_map)
-        route_groups = {}
-        route_to_index = {}
+        # Check each route, considering parallel paths for multi-gate routes
         for i, route in enumerate(self.routes):
             from_uni = route['from']
             to_uni = route['to']
             
-            # Create a consistent key regardless of direction
-            key = tuple(sorted([from_uni, to_uni]))
-            if key not in route_groups:
-                route_groups[key] = []
-            route_groups[key].append(route)
-            route_to_index[id(route)] = i
-        
-        # Check each route group
-        for (uni1, uni2), routes_group in route_groups.items():
-            if uni1 in scaled_positions and uni2 in scaled_positions:
-                base_start_pos = scaled_positions[uni1]
-                base_end_pos = scaled_positions[uni2]
+            if from_uni in scaled_positions and to_uni in scaled_positions:
+                start_pos = scaled_positions[from_uni]
+                end_pos = scaled_positions[to_uni]
                 
-                # If there's only one route, test normally
-                if len(routes_group) == 1:
-                    route = routes_group[0]
-                    # Adjust for route direction
-                    start_pos, end_pos = base_start_pos, base_end_pos
-                    if route['from'] != uni1:
-                        start_pos, end_pos = end_pos, start_pos
-                    
-                    distance = self._point_to_line_distance(absolute_pos, start_pos, end_pos)
-                    if distance <= click_tolerance:
-                        return route_to_index[id(route)]
-                else:
-                    # Multiple routes - test each with its offset
+                # Handle both array and single gate formats
+                gates = route['gate']
+                if isinstance(gates, str):
+                    gates = [gates]
+                
+                # Check if route has multiple gates and is unclaimed (parallel paths)
+                if len(gates) > 1 and not route.get('claimed_by'):
+                    # Check each parallel path
                     offset_distance = 25
-                    total_width = (len(routes_group) - 1) * offset_distance
+                    total_width = (len(gates) - 1) * offset_distance
                     start_offset = -total_width / 2
                     
-                    for i, route in enumerate(routes_group):
-                        offset = start_offset + i * offset_distance
+                    for j, gate in enumerate(gates):
+                        offset = start_offset + j * offset_distance
                         
                         # Calculate offset positions
-                        route_start, route_end = base_start_pos, base_end_pos
-                        if route['from'] != uni1:
-                            route_start, route_end = route_end, route_start
-                        
-                        # Apply perpendicular offset
-                        dx = route_end[0] - route_start[0]
-                        dy = route_end[1] - route_start[1]
+                        dx = end_pos[0] - start_pos[0]
+                        dy = end_pos[1] - start_pos[1]
                         length_route = math.sqrt(dx*dx + dy*dy)
                         if length_route > 0:
                             perp_x = -dy / length_route * offset
                             perp_y = dx / length_route * offset
-                            offset_start = (int(route_start[0] + perp_x), int(route_start[1] + perp_y))
-                            offset_end = (int(route_end[0] + perp_x), int(route_end[1] + perp_y))
+                            offset_start = (int(start_pos[0] + perp_x), int(start_pos[1] + perp_y))
+                            offset_end = (int(end_pos[0] + perp_x), int(end_pos[1] + perp_y))
                             
                             distance = self._point_to_line_distance(absolute_pos, offset_start, offset_end)
                             if distance <= click_tolerance:
-                                return route_to_index[id(route)]
+                                return i
+                else:
+                    # Single path check
+                    distance = self._point_to_line_distance(absolute_pos, start_pos, end_pos)
+                    if distance <= click_tolerance:
+                        return i
         
         return None
     
