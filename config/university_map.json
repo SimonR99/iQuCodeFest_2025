@@ -30,12 +30,12 @@
       "position": [40, 240],
       "color": [100, 150, 200]
     },
-    "UChicago": {
+    "U Chicago": {
       "name": "University of Chicago",
       "position": [550, 170],
       "color": [100, 150, 200]
     },
-    "UTexas": {
+    "U Texas": {
       "name": "University of Texas",
       "position": [450, 420],
       "color": [100, 150, 200]
@@ -45,7 +45,7 @@
       "position": [620, 380],
       "color": [100, 150, 200]
     },
-    "UWashington": {
+    "U Washington": {
       "name": "University of Washington",
       "position": [80, 60],
       "color": [100, 150, 200]
@@ -95,205 +95,102 @@
   },
   "routes": [
     {
-      "from": "MIT",
-      "to": "Harvard",
-      "gate": ["H", "X"],
-      "length": 1,
-      "claimed_by": {
-        "H": null,
-        "X": null
-      }
-    },
-    {
-      "from": "MIT",
-      "to": "Yale",
-      "gate": ["Z"],
-      "length": 1,
-      "claimed_by": {
-        "Z": null
-      }
-    },
-    {
-      "from": "Harvard",
-      "to": "Yale",
-      "gate": ["I"],
-      "length": 2,
-      "claimed_by": {
-        "I": null
-      }
-    },
-    {
-      "from": "Yale",
-      "to": "Princeton",
-      "gate": ["H"],
-      "length": 2,
-      "claimed_by": {
-        "H": null
-      }
-    },
-    {
-      "from": "Princeton",
-      "to": "Cornell",
-      "gate": ["X"],
-      "length": 1,
-      "claimed_by": {
-        "X": null
-      }
-    },
-    {
-      "from": "Cornell",
-      "to": "UMichigan",
-      "gate": ["Z"],
-      "length": 2,
-      "claimed_by": {
-        "Z": null
-      }
-    },
-    {
-      "from": "UMichigan",
-      "to": "UofT",
-      "gate": ["CNOT"],
-      "length": 1,
-      "claimed_by": {
-        "CNOT": null
-      }
-    },
-    {
-      "from": "UofT",
-      "to": "MIT",
-      "gate": ["I"],
-      "length": 3,
-      "claimed_by": {
-        "I": null
-      }
-    },
-    {
-      "from": "UofT",
-      "to": "UWashington",
-      "gate": ["H"],
-      "length": 3,
-      "claimed_by": {
-        "H": null
-      }
-    },
-    {
-      "from": "UWashington",
+      "from": "U Washington",
       "to": "Stanford",
-      "gate": ["X", "Z"],
-      "length": 2,
-      "claimed_by": {
-        "X": null,
-        "Z": null
-      }
-    },
-    {
-      "from": "Stanford",
-      "to": "UC Berkeley",
-      "gate": ["CNOT"],
-      "length": 1,
-      "claimed_by": {
-        "CNOT": null
-      }
-    },
-    {
-      "from": "UC Berkeley",
-      "to": "Caltech",
-      "gate": ["I"],
+      "gate": ["CNOT", "CNOT"],
       "length": 3,
-      "claimed_by": {
-        "I": null
-      }
+      "claimed_by": null
     },
     {
       "from": "Caltech",
-      "to": "UTexas",
-      "gate": ["H"],
-      "length": 2,
-      "claimed_by": {
-        "H": null
-      }
+      "to": "U Texas",
+      "gate": ["H", "I"],
+      "length": 5,
+      "claimed_by": null
     },
     {
-      "from": "UTexas",
-      "to": "UChicago",
-      "gate": ["X"],
-      "length": 2,
-      "claimed_by": {
-        "X": null
-      }
+      "from": "U Texas",
+      "to": "U Kansas",
+      "gate": ["I","X"],
+      "length": 3,
+      "claimed_by": null
     },
     {
-      "from": "UChicago",
-      "to": "UMichigan",
-      "gate": ["Z"],
-      "length": 1,
-      "claimed_by": {
-        "Z": null
-      }
-    },
-    {
-      "from": "UChicago",
+      "from": "U Chicago",
       "to": "Carnegie",
-      "gate": ["CNOT"],
-      "length": 2,
-      "claimed_by": {
-        "CNOT": null
-      }
+      "gate": ["CNOT","CNOT"],
+      "length": 1,
+      "claimed_by": null
     },
     {
       "from": "Carnegie",
       "to": "Princeton",
-      "gate": ["I"],
+      "gate": ["I","H"],
       "length": 2,
-      "claimed_by": {
-        "I": null
-      }
+      "claimed_by": null
     },
     {
       "from": "Carnegie",
       "to": "GeorgiaTech",
-      "gate": ["H"],
-      "length": 1,
-      "claimed_by": {
-        "H": null
-      }
+      "gate": ["H","I"],
+      "length": 2,
+      "claimed_by": null
     },
     {
       "from": "GeorgiaTech",
-      "to": "UTexas",
+      "to": "U Texas",
       "gate": ["X", "Z"],
-      "length": 3,
-      "claimed_by": {
-        "X": null,
-        "Z": null
-      }
+      "length": 2,
+      "claimed_by": null
     },
     {
       "from": "Stanford",
       "to": "Caltech",
-      "gate": ["CNOT"],
-      "length": 2,
-      "claimed_by": {
-        "CNOT": null
-      }
+      "gate": ["Z","Z"],
+      "length": 1,
+      "claimed_by": null
     },
     {
-      "from": "UC Berkeley",
-      "to": "UWashington",
-      "gate": ["I"],
+      "from": "Los Alamos",
+      "to": "Caltech",
+      "gate": ["I","X"],
       "length": 3,
-      "claimed_by": {
-        "I": null
-      }
+      "claimed_by": null
     },
     {
-      "from": "Cornell",
-      "to": "UofT",
-      "gate": ["H"],
+      "from": "Los Alamos",
+      "to": "U Utah",
+      "gate": ["Z","I"],
       "length": 2,
-      "claimed_by": {
-        "H": null
-      }
+      "claimed_by": null
+    },
+    {
+      "from": "U Utah",
+      "to": "UBC",
+      "gate": ["Z","Z"],
+      "length": 2,
+      "claimed_by": null
+    },
+    {
+      "from": "U Washington",
+      "to": "U Utah",
+      "gate": ["Z","Z"],
+      "length": 2,
+      "claimed_by": null
+    },
+    {
+      "from": "UBC",
+      "to": "U Calgary",
+      "gate": ["Z","Z"],
+      "length": 3,
+      "claimed_by": null
+    },
+    {
+      "from": "U Calgary",
+      "to": "U Chicago",
+      "gate": ["Z","Z"],
+      "length": 3,
+      "claimed_by": null
     }
   ],
   "map_settings": {
