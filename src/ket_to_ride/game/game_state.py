@@ -346,6 +346,10 @@ class GameState:
             route['claimed_by'][selected_gate] = player.player_id
             # Add route scoring
             self.add_route_scoring(player, length)
+            
+            # Check for mission completion after claiming a route
+            self.check_mission_completion(player)
+            
             return True
 
         return False
@@ -361,14 +365,16 @@ class GameState:
             # Check if player has a path from any start city to target
             for start_city in mission.start_cities:
                 path_routes = self.get_path_routes(player, start_city, mission.target_city)
+                print(f"Checking mission: {start_city} → {mission.target_city}")
+                print(f"  Found path routes: {len(path_routes)}")
                 if path_routes:
                     # Simulate the quantum circuit
                     route_gates = []
                     for route in path_routes:
-                        # Use the gate that was claimed with (stored in claimed_with_gate)
-                        # or the first gate if it's an array
+                        # Use the gate that was claimed with (should be set in get_path_routes)
                         gate = route.get('claimed_with_gate')
                         if gate is None:
+                            print(f"Warning: No claimed_with_gate found for route {route['from']}-{route['to']}")
                             # Fallback: use first gate from array or the gate if it's a string
                             gates = route['gate']
                             if isinstance(gates, list):
@@ -425,7 +431,19 @@ class GameState:
             
             # Find routes claimed by this player from current city
             for route in self.routes:
-                if route.get('claimed_by') == player.player_id:
+                claimed_by = route.get('claimed_by', {})
+                # Check if player claimed any gate on this route
+                player_claimed_gate = None
+                if isinstance(claimed_by, dict):
+                    for gate, owner in claimed_by.items():
+                        if owner == player.player_id:
+                            player_claimed_gate = gate
+                            break
+                elif claimed_by == player.player_id:
+                    # Handle old format
+                    player_claimed_gate = route['gate']
+                
+                if player_claimed_gate:
                     next_city = None
                     if route['from'] == current:
                         next_city = route['to']
@@ -433,7 +451,10 @@ class GameState:
                         next_city = route['from']
                         
                     if next_city and next_city not in visited:
-                        new_path = path_routes + [route]
+                        # Add the gate used to the route info for quantum simulation
+                        route_copy = route.copy()
+                        route_copy['claimed_with_gate'] = player_claimed_gate
+                        new_path = path_routes + [route_copy]
                         if next_city == target:
                             return new_path
                         queue.append((next_city, new_path))
