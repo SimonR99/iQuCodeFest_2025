@@ -2,111 +2,91 @@
   "universities": {
     "MIT": {
       "name": "Massachusetts Institute of Technology",
-      "position": [950, 180],
+      "position": [920, 180],
       "color": [200, 100, 100]
+    },
+    "Stanford": {
+      "name": "Stanford University",
+      "position": [150, 320],
+      "color": [150, 200, 100]
     },
     "Harvard": {
       "name": "Harvard University",
-      "position": [970, 160],
+      "position": [950, 250],
       "color": [100, 150, 200]
     },
-    "Yale": {
-      "name": "Yale University",
-      "position": [920, 200],
-      "color": [120, 120, 200]
-    },
-    "Columbia": {
-      "name": "Columbia University",
-      "position": [940, 220],
-      "color": [200, 120, 180]
+    "Caltech": {
+      "name": "California Institute of Technology",
+      "position": [180, 480],
+      "color": [200, 150, 100]
     },
     "Princeton": {
       "name": "Princeton University",
-      "position": [920, 240],
+      "position": [880, 420],
       "color": [150, 100, 200]
+    },
+    "UC Berkeley": {
+      "name": "UC Berkeley",
+      "position": [120, 380],
+      "color": [200, 200, 100]
+    },
+    "Yale": {
+      "name": "Yale University",
+      "position": [850, 160],
+      "color": [120, 120, 200]
+    },
+    "UChicago": {
+      "name": "University of Chicago",
+      "position": [650, 280],
+      "color": [100, 200, 150]
     },
     "Cornell": {
       "name": "Cornell University",
-      "position": [880, 190],
+      "position": [780, 350],
       "color": [200, 80, 80]
     },
     "UMichigan": {
       "name": "University of Michigan",
-      "position": [750, 220],
+      "position": [720, 120],
       "color": [255, 100, 100]
-    },
-    "UChicago": {
-      "name": "University of Chicago",
-      "position": [700, 280],
-      "color": [100, 200, 150]
     },
     "UTexas": {
       "name": "University of Texas",
-      "position": [550, 480],
+      "position": [580, 450],
       "color": [200, 100, 50]
-    },
-    "Stanford": {
-      "name": "Stanford University",
-      "position": [180, 380],
-      "color": [150, 200, 100]
-    },
-    "UC Berkeley": {
-      "name": "UC Berkeley",
-      "position": [160, 350],
-      "color": [200, 200, 100]
-    },
-    "Caltech": {
-      "name": "California Institute of Technology",
-      "position": [200, 480],
-      "color": [200, 150, 100]
-    },
-    "UCLA": {
-      "name": "University of California, Los Angeles",
-      "position": [190, 500],
-      "color": [100, 200, 200]
     },
     "GeorgiaTech": {
       "name": "Georgia Institute of Technology",
-      "position": [800, 480],
+      "position": [750, 480],
       "color": [255, 200, 50]
     },
     "UWashington": {
       "name": "University of Washington",
-      "position": [120, 100],
+      "position": [220, 120],
       "color": [120, 80, 200]
-    },
-    "UBC": {
-      "name": "University of British Columbia",
-      "position": [80, 60],
-      "color": [80, 180, 220]
     },
     "UofT": {
       "name": "University of Toronto",
-      "position": [850, 120],
+      "position": [820, 90],
       "color": [60, 120, 200]
     }
   },
   "routes": [
     {"from": "MIT", "to": "Harvard", "gate": "H", "length": 1, "claimed_by": null},
     {"from": "MIT", "to": "Yale", "gate": "X", "length": 2, "claimed_by": null},
-    {"from": "Harvard", "to": "Yale", "gate": "Z", "length": 2, "claimed_by": null},
-    {"from": "Harvard", "to": "Columbia", "gate": "CNOT", "length": 3, "claimed_by": null},
-    {"from": "Columbia", "to": "Princeton", "gate": "I", "length": 1, "claimed_by": null},
-    {"from": "Princeton", "to": "Cornell", "gate": "H", "length": 2, "claimed_by": null},
-    {"from": "Cornell", "to": "UMichigan", "gate": "X", "length": 3, "claimed_by": null},
-    {"from": "UMichigan", "to": "UChicago", "gate": "Z", "length": 2, "claimed_by": null},
-    {"from": "UChicago", "to": "UTexas", "gate": "CNOT", "length": 5, "claimed_by": null},
-    {"from": "UTexas", "to": "GeorgiaTech", "gate": "I", "length": 5, "claimed_by": null},
-    {"from": "UChicago", "to": "Stanford", "gate": "H", "length": 6, "claimed_by": null},
-    {"from": "Stanford", "to": "UC Berkeley", "gate": "X", "length": 1, "claimed_by": null},
-    {"from": "UC Berkeley", "to": "Caltech", "gate": "Z", "length": 2, "claimed_by": null},
-    {"from": "Caltech", "to": "UCLA", "gate": "CNOT", "length": 1, "claimed_by": null},
-    {"from": "UCLA", "to": "UWashington", "gate": "I", "length": 7, "claimed_by": null},
-    {"from": "UWashington", "to": "UBC", "gate": "H", "length": 2, "claimed_by": null},
-    {"from": "UBC", "to": "Stanford", "gate": "X", "length": 6, "claimed_by": null},
-    {"from": "UofT", "to": "Cornell", "gate": "Z", "length": 3, "claimed_by": null},
-    {"from": "UofT", "to": "MIT", "gate": "CNOT", "length": 4, "claimed_by": null},
-    {"from": "UofT", "to": "UBC", "gate": "I", "length": 8, "claimed_by": null}
+    {"from": "Yale", "to": "UMichigan", "gate": "Z", "length": 2, "claimed_by": null},
+    {"from": "UMichigan", "to": "UWashington", "gate": "CNOT", "length": 3, "claimed_by": null},
+    {"from": "UWashington", "to": "Stanford", "gate": "I", "length": 2, "claimed_by": null},
+    {"from": "Stanford", "to": "Caltech", "gate": "H", "length": 2, "claimed_by": null},
+    {"from": "Caltech", "to": "UC Berkeley", "gate": "X", "length": 1, "claimed_by": null},
+    {"from": "UC Berkeley", "to": "GeorgiaTech", "gate": "Z", "length": 4, "claimed_by": null},
+    {"from": "GeorgiaTech", "to": "UofT", "gate": "CNOT", "length": 3, "claimed_by": null},
+    {"from": "UofT", "to": "Cornell", "gate": "I", "length": 2, "claimed_by": null},
+    {"from": "Cornell", "to": "UChicago", "gate": "H", "length": 2, "claimed_by": null},
+    {"from": "UChicago", "to": "Princeton", "gate": "X", "length": 3, "claimed_by": null},
+    {"from": "Princeton", "to": "Harvard", "gate": "Z", "length": 2, "claimed_by": null},
+    {"from": "UTexas", "to": "UChicago", "gate": "CNOT", "length": 2, "claimed_by": null},
+    {"from": "UTexas", "to": "GeorgiaTech", "gate": "I", "length": 2, "claimed_by": null}
   ],
   "map_settings": {
     "background_color": [85, 95, 82],
