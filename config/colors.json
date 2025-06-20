@@ -14,18 +14,11 @@
       "image_path": "assets/cards/X_gate.png",
       "border_color": [200, 120, 100]
     },
-    "Y": {
-      "rgb": [140, 160, 120],
-      "hex": "#8CA078",
-      "name": "Sage Green",
-      "image_path": null,
-      "border_color": [140, 160, 120]
-    },
     "Z": {
       "rgb": [120, 140, 160],
       "hex": "#788CA0",
       "name": "Slate Blue",
-      "image_path": null,
+      "image_path": "assets/cards/Z_gate.png",
       "border_color": [120, 140, 160]
     },
     "H": {
@@ -46,7 +39,7 @@
       "rgb": [80, 90, 75],
       "hex": "#505A4B",
       "name": "Dark Forest",
-      "image_path": "assets/cards/deck_back.png",
+      "image_path": "assets/cards/DECK_gate.png",
       "border_color": [120, 110, 95]
     }
   },

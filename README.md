@@ -17,7 +17,7 @@ python main.py
 
 The game window will display:
 - **Map Area**: Shows cities and quantum gate routes
-- **Player Hand**: Displays your gate cards (I, X, Y, Z, H, CNOT)
+- **Player Hand**: Displays your gate cards (I, X, Z, H, CNOT)
 - **Info Panel**: Shows current player, mission, and available actions
 
 ## Controls
@@ -62,7 +62,7 @@ The game window will display:
 - [x] **Route hover effects** - Routes highlight on mouse hover
 - [x] **Interactive route claiming** - Click routes to select and claim
 - [x] University map with quantum gate routes
-- [x] Gate card system (I, X, Y, Z, H, CNOT) with color coding
+- [x] Gate card system (I, X, Z, H, CNOT) with color coding
 - [x] Player hand management and card display
 - [x] Mission card system with quantum state goals
 - [x] Quantum circuit simulation using numpy
@@ -89,18 +89,18 @@ The game window will display:
 ## Game Description
 
 ### Game Concept
-Players compete to build train-like "quantum circuits" on a map of cities. Each route between two cities is labeled with a quantum gate (I, X, Y, Z, H or CNOT) and a length (the number of gate applications required). To claim a route, a player discards gate cards matching the route's gate type equal to its length, then places their marker on that route. Every mission starts with a single qubit in a specified initial state at a start city and ends with that qubit arriving in a specified target state at a target city. When a continuous path of claimed routes connects start to target, the player "runs" the circuit by applying each gate in turn (using a quantum simulator or hardware). If the final state matches the mission's target, the player immediately wins.
+Players compete to build train-like "quantum circuits" on a map of cities. Each route between two cities is labeled with a quantum gate (I, X, Z, H or CNOT) and a length (the number of gate applications required). To claim a route, a player discards gate cards matching the route's gate type equal to its length, then places their marker on that route. Every mission starts with a single qubit in a specified initial state at a start city and ends with that qubit arriving in a specified target state at a target city. When a continuous path of claimed routes connects start to target, the player "runs" the circuit by applying each gate in turn (using a quantum simulator or hardware). If the final state matches the mission's target, the player immediately wins.
 
 ### Components
 
 **City Graph:** A network of named nodes (cities) connected by edges (routes).
 
 **Routes:** Each edge has:
-- A gate label (I, X, Y, Z, H or CNOT)
+- A gate label (I, X, Z, H or CNOT)
 - A length (an integer ≥ 1)
 - A claim marker (which player has claimed it, if any)
 
-**Gate Card Deck:** Cards showing one of the six gate types.
+**Gate Card Deck:** Cards showing one of the five gate types.
 
 **Player Hands:** Each player holds up to a fixed number of gate cards.
 

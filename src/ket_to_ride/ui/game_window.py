@@ -127,7 +127,6 @@ class GameWindow:
                 'gate_colors': {
                     'I': {'rgb': [240, 235, 220], 'image_path': None, 'border_color': [240, 235, 220]},
                     'X': {'rgb': [200, 120, 100], 'image_path': None, 'border_color': [200, 120, 100]},
-                    'Y': {'rgb': [140, 160, 120], 'image_path': None, 'border_color': [140, 160, 120]},
                     'Z': {'rgb': [120, 140, 160], 'image_path': None, 'border_color': [120, 140, 160]},
                     'H': {'rgb': [190, 170, 130], 'image_path': None, 'border_color': [190, 170, 130]},
                     'CNOT': {'rgb': [160, 120, 140], 'image_path': None, 'border_color': [160, 120, 140]}
@@ -509,7 +508,6 @@ class GameWindow:
         gate_colors = {
             GateType.I: tuple(self.colors['gate_colors']['I']['rgb']),
             GateType.X: tuple(self.colors['gate_colors']['X']['rgb']),
-            GateType.Y: tuple(self.colors['gate_colors']['Y']['rgb']),
             GateType.Z: tuple(self.colors['gate_colors']['Z']['rgb']),
             GateType.H: tuple(self.colors['gate_colors']['H']['rgb']),
             GateType.CNOT: tuple(self.colors['gate_colors']['CNOT']['rgb']),
@@ -573,7 +571,6 @@ class GameWindow:
         gate_colors = {
             GateType.I: tuple(self.colors['gate_colors']['I']['rgb']),
             GateType.X: tuple(self.colors['gate_colors']['X']['rgb']),
-            GateType.Y: tuple(self.colors['gate_colors']['Y']['rgb']),
             GateType.Z: tuple(self.colors['gate_colors']['Z']['rgb']),
             GateType.H: tuple(self.colors['gate_colors']['H']['rgb']),
             GateType.CNOT: tuple(self.colors['gate_colors']['CNOT']['rgb'])

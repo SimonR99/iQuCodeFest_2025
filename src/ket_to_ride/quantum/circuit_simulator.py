@@ -72,7 +72,6 @@ class CircuitSimulator:
         self.gate_matrices = {
             'I': QuantumGates.I,
             'X': QuantumGates.X,
-            'Y': QuantumGates.Y,
             'Z': QuantumGates.Z,
             'H': QuantumGates.H,
             'CNOT': QuantumGates.CNOT,  # Simplified for single qubit
@@ -132,7 +131,6 @@ class CircuitSimulator:
         descriptions = {
             'I': "Identity - no change",
             'X': "Bit flip - |0⟩↔|1⟩", 
-            'Y': "Bit and phase flip",
             'Z': "Phase flip - |1⟩→-|1⟩",
             'H': "Superposition - creates equal probability",
             'CNOT': "Controlled operation (simplified in single-qubit mode)"

@@ -57,14 +57,12 @@ class BlochRotation:
         num_steps : Number of intermediate points for smooth rotation
         """
         points = []
-        if axis in ['X', 'Y', 'Z']:
+        if axis in ['X', 'Z']:
             for step in range(num_steps + 1):
                 t = step / num_steps
                 current_angle = angle * t
                 if axis == 'X':
                     new_point = BlochRotation._rotate_x(start_point, current_angle)
-                elif axis == 'Y':
-                    new_point = BlochRotation._rotate_y(start_point, current_angle)
                 else:  # Z rotation
                     new_point = BlochRotation._rotate_z(start_point, current_angle)
                 points.append(new_point)
@@ -154,10 +152,6 @@ class BlochGate:
         return BlochOperation(axis='X', angle=np.pi, color=color)
 
     @staticmethod
-    def Y_gate(color: str = 'green') -> BlochOperation:
-        return BlochOperation(axis='Y', angle=np.pi, color=color)
-
-    @staticmethod
     def Z_gate(color: str = 'blue') -> BlochOperation:
         return BlochOperation(axis='Z', angle=np.pi, color=color)
 
@@ -180,10 +174,6 @@ class BlochGate:
     @staticmethod
     def Rx(angle: float, color: str = 'red') -> BlochOperation:
         return BlochOperation(axis='X', angle=angle, color=color)
-
-    @staticmethod
-    def Ry(angle: float, color: str = 'green') -> BlochOperation:
-        return BlochOperation(axis='Y', angle=angle, color=color)
 
     @staticmethod
     def Rz(angle: float, color: str = 'blue') -> BlochOperation:
@@ -298,7 +288,7 @@ class BlochSphereVisualizer:
 
         # Add axes with labels
         axes = [(1, 0, 0), (0, 1, 0), (0, 0, 1)]
-        labels = ['x', 'y', 'z']
+        labels = ['x', 'z']
         colors = ['red', 'green', 'blue']
 
         for axis, label, color in zip(axes, labels, colors):
@@ -314,7 +304,6 @@ class BlochSphereVisualizer:
             scene=dict(
                 aspectmode='cube',
                 xaxis_title='X',
-                yaxis_title='Y',
                 zaxis_title='Z'
             ),
             showlegend=True
@@ -1969,14 +1958,13 @@ def save_bloch_animation(fig, filename="bloch_animation", format='gif', duration
         axis_length = 1.2
         axes = [(axis_length, 0, 0), (0, axis_length, 0), (0, 0, axis_length)]
         colors = ['red', 'green', 'blue']
-        labels = ['x', 'y', 'z']
+        labels = ['x', 'z']
         
         for (x, y, z), color, label in zip(axes, colors, labels):
             ax.plot([0, x], [0, y], [0, z], color=color, linewidth=3, label=label)
         
         # Set labels and limits
         ax.set_xlabel('X')
-        ax.set_ylabel('Y')
         ax.set_zlabel('Z')
         ax.set_xlim([-1.2, 1.2])
         ax.set_ylim([-1.2, 1.2])
