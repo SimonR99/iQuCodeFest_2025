@@ -1,18 +1,16 @@
 {
   "gate_colors": {
     "I": {
-      "rgb": [240, 235, 220],
-      "hex": "#F0EBDC",
-      "name": "Cream White",
+      "rgb": [255, 255, 255],
       "image_path": "assets/cards/I_gate.png",
-      "border_color": [240, 235, 220]
+      "rail_image_path": null,
+      "border_color": [255, 255, 255]
     },
     "X": {
-      "rgb": [200, 120, 100],
-      "hex": "#C87864",
-      "name": "Terracotta Red",
+      "rgb": [128, 0, 128],
       "image_path": "assets/cards/X_gate.png",
-      "border_color": [200, 120, 100]
+      "rail_image_path": null,
+      "border_color": [128, 0, 128]
     },
     "Z": {
       "rgb": [120, 140, 160],
@@ -22,88 +20,45 @@
       "border_color": [120, 140, 160]
     },
     "H": {
-      "rgb": [190, 170, 130],
-      "hex": "#BEAA82",
-      "name": "Sandy Brown",
+      "rgb": [0, 128, 0],
       "image_path": "assets/cards/H_gate.png",
-      "border_color": [190, 170, 130]
+      "rail_image_path": null,
+      "border_color": [0, 128, 0]
     },
     "CNOT": {
-      "rgb": [160, 120, 140],
-      "hex": "#A0788C",
-      "name": "Mauve Purple",
+      "rgb": [255, 255, 0],
       "image_path": "assets/cards/CNOT_gate.png",
-      "border_color": [160, 120, 140]
+      "rail_image_path": null,
+      "border_color": [255, 255, 0]
     },
     "DECK": {
       "rgb": [80, 90, 75],
-      "hex": "#505A4B",
-      "name": "Dark Forest",
-      "image_path": "assets/cards/DECK_gate.png",
+      "image_path": "assets/cards/deck_back.png",
+      "rail_image_path": null,
       "border_color": [120, 110, 95]
     }
   },
   "ui_colors": {
     "background": {
-      "rgb": [45, 52, 48],
-      "hex": "#2D3430",
-      "name": "Dark Forest Green"
+      "rgb": [45, 52, 48]
     },
     "map_area": {
-      "rgb": [85, 95, 82],
-      "hex": "#555F52",
-      "name": "Muted Sage Green"
+      "rgb": [85, 95, 82]
     },
     "card_area": {
-      "rgb": [68, 75, 65],
-      "hex": "#444B41",
-      "name": "Darker Sage"
+      "rgb": [68, 75, 65]
     },
     "info_panel": {
-      "rgb": [58, 65, 55],
-      "hex": "#3A4137",
-      "name": "Forest Green"
+      "rgb": [58, 65, 55]
     },
     "border": {
-      "rgb": [120, 110, 95],
-      "hex": "#786E5F",
-      "name": "Warm Brown"
+      "rgb": [120, 110, 95]
     },
     "text": {
-      "rgb": [250, 248, 240],
-      "hex": "#FAF8F0",
-      "name": "Warm White"
+      "rgb": [250, 248, 240]
     },
     "accent": {
-      "rgb": [160, 140, 110],
-      "hex": "#A08C6E",
-      "name": "Sandy Brown"
-    }
-  },
-  "rail_images": {
-    "I": {
-      "image_path": "assets/rails/I_rail.png",
-      "fallback_color": [240, 235, 220]
-    },
-    "X": {
-      "image_path": "assets/rails/X_rail.png",
-      "fallback_color": [200, 120, 100]
-    },
-    "Y": {
-      "image_path": "assets/rails/Y_rail.png",
-      "fallback_color": [140, 160, 120]
-    },
-    "Z": {
-      "image_path": "assets/rails/Z_rail.png",
-      "fallback_color": [120, 140, 160]
-    },
-    "H": {
-      "image_path": "assets/rails/H_rail.png",
-      "fallback_color": [190, 170, 130]
-    },
-    "CNOT": {
-      "image_path": "assets/rails/CNOT_rail.png",
-      "fallback_color": [160, 120, 140]
+      "rgb": [160, 140, 110]
     }
   }
 }
