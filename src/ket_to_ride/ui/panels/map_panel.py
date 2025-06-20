@@ -29,6 +29,7 @@ class MapPanel(BasePanel):
         """Draw the map panel"""
         selected_route_idx = kwargs.get('selected_route_idx')
         selected_gate = kwargs.get('selected_gate')
+        selected_gate_index = kwargs.get('selected_gate_index')
         hovered_route_idx = kwargs.get('hovered_route_idx')
         
         # Draw background image in map area if available
@@ -53,17 +54,19 @@ class MapPanel(BasePanel):
         if selected_route_idx is not None:
             highlight_route = selected_route_idx
             highlight_gate = selected_gate
+            highlight_gate_index = selected_gate_index
         else:
             highlight_route = hovered_route_idx
             highlight_gate = None  # Hover doesn't specify a specific gate
+            highlight_gate_index = None
             
-        self.map_renderer.draw_map(surface, self.rect, highlight_route, highlight_gate, game_state)
+        self.map_renderer.draw_map(surface, self.rect, highlight_route, highlight_gate, game_state, highlight_gate_index)
         
     def _handle_click_internal(self, pos: Tuple[int, int], game_state, **kwargs) -> Optional[str]:
         """Handle clicks on the map"""
         route_result = self.map_renderer.get_route_at_position(self.rect, pos, game_state)
         if route_result is not None:
-            route_idx, selected_gate = route_result
+            route_idx, selected_gate, gate_index = route_result
             route = game_state.routes[route_idx]
             
             # Check if this specific gate is claimable
@@ -71,17 +74,17 @@ class MapPanel(BasePanel):
             if isinstance(claimed_by, dict):
                 # New format: check if this specific gate is unclaimed
                 if claimed_by.get(selected_gate) is None:
-                    return f"route_selected:{route_idx}:{selected_gate}"
+                    return f"route_selected:{route_idx}:{selected_gate}:{gate_index}"
             else:
                 # Old format: check if route is unclaimed
                 if claimed_by is None:
-                    return f"route_selected:{route_idx}:{selected_gate}"
+                    return f"route_selected:{route_idx}:{selected_gate}:{gate_index}"
         return None
         
     def _handle_hover_internal(self, pos: Tuple[int, int], game_state, **kwargs) -> Optional[Any]:
         """Handle hover on the map"""
         route_result = self.map_renderer.get_route_at_position(self.rect, pos, game_state)
         if route_result is not None:
-            route_idx, selected_gate = route_result
+            route_idx, selected_gate, gate_index = route_result
             return route_idx  # For now, just return the route index for hover highlighting
         return None 

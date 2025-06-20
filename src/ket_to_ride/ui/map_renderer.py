@@ -548,7 +548,7 @@ class MapRenderer:
             # Draw text directly without background for cleaner look
             surface.blit(name_text, text_rect)
     
-    def draw_map(self, surface: pygame.Surface, map_rect: pygame.Rect, highlighted_route_idx: Optional[int] = None, highlighted_gate: Optional[str] = None, game_state=None):
+    def draw_map(self, surface: pygame.Surface, map_rect: pygame.Rect, highlighted_route_idx: Optional[int] = None, highlighted_gate: Optional[str] = None, game_state=None, highlighted_gate_index: Optional[int] = None):
         if not self.font:
             self.initialize_font()
             
@@ -621,8 +621,10 @@ class MapRenderer:
                         if temp_route['claimed_by']:
                             gate_player_color = self.get_player_color(temp_route['claimed_by'], game_state)
                         
-                        # Only highlight this specific gate if it matches the highlighted gate
-                        highlighted = (highlighted_route_idx == i and highlighted_gate == gate)
+                        # Only highlight this specific gate if it matches the highlighted gate AND index
+                        highlighted = (highlighted_route_idx == i and 
+                                     highlighted_gate == gate and 
+                                     highlighted_gate_index == j)
                         
                         self.draw_route(surface, start_pos, end_pos, temp_route, int(offset), highlighted, gate_player_color)
                 else:
@@ -662,8 +664,8 @@ class MapRenderer:
         return None
     
     def get_route_at_position(self, map_rect: pygame.Rect, 
-                             mouse_pos: Tuple[int, int], game_state=None) -> Optional[Tuple[int, str]]:
-        """Find which route and gate (if any) is clicked by the mouse. Returns (route_index, gate) or None"""
+                             mouse_pos: Tuple[int, int], game_state=None) -> Optional[Tuple[int, str, int]]:
+        """Find which route and gate (if any) is clicked by the mouse. Returns (route_index, gate, gate_index) or None"""
         if not self.universities:
             return None
             
@@ -675,6 +677,10 @@ class MapRenderer:
         
         # Use routes from game_state if available, otherwise use loaded routes
         routes_to_check = game_state.routes if game_state else self.routes
+        
+        # Track the closest match for parallel routes
+        closest_match = None
+        closest_distance = float('inf')
         
         # Check each route, considering parallel paths for multi-gate routes
         for i, route in enumerate(routes_to_check):
@@ -711,15 +717,17 @@ class MapRenderer:
                             offset_end = (int(end_pos[0] + perp_x), int(end_pos[1] + perp_y))
                             
                             distance = self._point_to_line_distance(absolute_pos, offset_start, offset_end)
-                            if distance <= click_tolerance:
-                                return (i, gate)
+                            if distance <= click_tolerance and distance < closest_distance:
+                                closest_match = (i, gate, j)
+                                closest_distance = distance
                 else:
                     # Single path check
                     distance = self._point_to_line_distance(absolute_pos, start_pos, end_pos)
-                    if distance <= click_tolerance:
-                        return (i, gates[0])
+                    if distance <= click_tolerance and distance < closest_distance:
+                        closest_match = (i, gates[0], 0)
+                        closest_distance = distance
         
-        return None
+        return closest_match
     
     def _point_to_line_distance(self, point: Tuple[int, int], 
                                line_start: Tuple[int, int], 
