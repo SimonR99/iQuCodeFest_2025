@@ -97,7 +97,7 @@ class MissionCard:
             return 1
         
         # Two qubit states
-        elif state_str in ["|00⟩", "|01⟩", "|10⟩", "|11⟩", "|Bell+⟩", "|Bell-⟩", "|Φ+⟩", "|Φ-⟩", "|Ψ+⟩", "|Ψ-⟩"]:
+        elif state_str in ["|00⟩", "|01⟩", "|10⟩", "|11⟩", "|Bell+⟩", "|Bell-⟩", "|Φ+⟩", "|Φ-⟩", "|Ψ+⟩", "|Ψ-⟩", "|00⟩ + |11⟩"]:
             return 2
         
         # Three qubit states
@@ -128,10 +128,14 @@ class MissionCard:
     
     def is_superposition_target(self) -> bool:
         """Check if the target state is a superposition"""
-        superposition_states = ["|+⟩", "|-⟩", "|Bell+⟩", "|Bell-⟩", "|Φ+⟩", "|Φ-⟩", "|Ψ+⟩", "|Ψ-⟩", "|GHZ⟩", "|W⟩"]
+        superposition_states = ["|+⟩", "|-⟩", "|Bell+⟩", "|Bell-⟩", "|Φ+⟩", "|Φ-⟩", "|Ψ+⟩", "|Ψ-⟩", "|GHZ⟩", "|W⟩", "|00⟩ + |11⟩"]
         return self.target_state in superposition_states
         
     def __str__(self):
-        start_str = " OR ".join(self.start_cities)
+        if len(self.start_cities) > 1:
+            # For multi-qubit missions, use "AND" to show you need both cities
+            start_str = " AND ".join(self.start_cities)
+        else:
+            start_str = self.start_cities[0]
         complexity = f"({self.get_complexity_description()})"
         return f"({start_str}) {self.initial_state} → {self.target_city} {self.target_state} {complexity} ({self.points}pts)"

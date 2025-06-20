@@ -241,7 +241,7 @@ class QiskitCircuitSimulator:
             return 1
         
         # Two qubit states
-        elif state_str in ["|00⟩", "|01⟩", "|10⟩", "|11⟩", "|Bell+⟩", "|Bell-⟩", "|Φ+⟩", "|Φ-⟩", "|Ψ+⟩", "|Ψ-⟩"]:
+        elif state_str in ["|00⟩", "|01⟩", "|10⟩", "|11⟩", "|Bell+⟩", "|Bell-⟩", "|Φ+⟩", "|Φ-⟩", "|Ψ+⟩", "|Ψ-⟩", "|00⟩ + |11⟩"]:
             return 2
         
         # Three qubit states
@@ -304,40 +304,88 @@ class QiskitCircuitSimulator:
         """
         feasible_paths = []
         
-        # For each start city, find all possible paths to target
-        for start_city in start_cities:
-            paths = self._find_all_paths(start_city, target_city, available_routes)
+        # For multi-qubit missions, we need to ensure ALL start cities have feasible paths
+        # For single qubit missions, we only need one feasible path
+        if len(start_cities) > 1:
+            # Multi-qubit mission: check that ALL start cities have feasible paths
+            all_cities_feasible = True
+            city_feasible_paths = {}
             
-            for path in paths:
-                # For each path, we need to test all possible gate combinations
-                # since each route can have multiple gate options
-                gate_choices = []
-                for route in path:
-                    gates = route['gate'] if isinstance(route['gate'], list) else [route['gate']]
-                    gate_choices.append([(gate, route['length']) for gate in gates])
+            for start_city in start_cities:
+                city_paths = self._find_all_paths(start_city, target_city, available_routes)
+                city_feasible = False
                 
-                # Generate all possible gate combinations for this path
-                if gate_choices:
-                    for gate_combination in itertools.product(*gate_choices):
-                        # Test if this specific gate combination can achieve the transformation
-                        try:
-                            success, final_state, gate_sequence = self.simulate_path(
-                                initial_state, list(gate_combination), target_state
-                            )
-                            
-                            if success:
-                                feasible_paths.append({
-                                    'start_city': start_city,
-                                    'path': path,
-                                    'gate_combination': gate_combination,
-                                    'gate_sequence': gate_sequence,
-                                    'final_state': final_state.get_state_description()
-                                })
-                                # For efficiency, only keep one working combination per path
-                                break
-                        except Exception as e:
-                            # Skip gate combinations that cause simulation errors
-                            continue
+                for path in city_paths:
+                    # Test all possible gate combinations for this path
+                    gate_choices = []
+                    for route in path:
+                        gates = route['gate'] if isinstance(route['gate'], list) else [route['gate']]
+                        gate_choices.append([(gate, route['length']) for gate in gates])
+                    
+                    if gate_choices:
+                        for gate_combination in itertools.product(*gate_choices):
+                            try:
+                                # For multi-qubit paths, we need to simulate the combined effect
+                                # This is simplified - in reality, we'd need to track both qubits
+                                success, final_state, gate_sequence = self.simulate_path(
+                                    initial_state, list(gate_combination), target_state
+                                )
+                                
+                                if success:
+                                    city_feasible = True
+                                    city_feasible_paths[start_city] = {
+                                        'start_city': start_city,
+                                        'path': path,
+                                        'gate_combination': gate_combination,
+                                        'gate_sequence': gate_sequence,
+                                        'final_state': final_state.get_state_description()
+                                    }
+                                    break
+                            except Exception as e:
+                                continue
+                
+                if not city_feasible:
+                    all_cities_feasible = False
+                    break
+            
+            # Only return feasible paths if ALL cities have feasible paths
+            if all_cities_feasible:
+                feasible_paths = list(city_feasible_paths.values())
+        else:
+            # Single qubit mission: check each start city individually
+            for start_city in start_cities:
+                paths = self._find_all_paths(start_city, target_city, available_routes)
+                
+                for path in paths:
+                    # For each path, we need to test all possible gate combinations
+                    # since each route can have multiple gate options
+                    gate_choices = []
+                    for route in path:
+                        gates = route['gate'] if isinstance(route['gate'], list) else [route['gate']]
+                        gate_choices.append([(gate, route['length']) for gate in gates])
+                    
+                    # Generate all possible gate combinations for this path
+                    if gate_choices:
+                        for gate_combination in itertools.product(*gate_choices):
+                            # Test if this specific gate combination can achieve the transformation
+                            try:
+                                success, final_state, gate_sequence = self.simulate_path(
+                                    initial_state, list(gate_combination), target_state
+                                )
+                                
+                                if success:
+                                    feasible_paths.append({
+                                        'start_city': start_city,
+                                        'path': path,
+                                        'gate_combination': gate_combination,
+                                        'gate_sequence': gate_sequence,
+                                        'final_state': final_state.get_state_description()
+                                    })
+                                    # For efficiency, only keep one working combination per path
+                                    break
+                            except Exception as e:
+                                # Skip gate combinations that cause simulation errors
+                                continue
         
         return feasible_paths
     
@@ -391,6 +439,39 @@ class QiskitCircuitSimulator:
             'CNOT': "Controlled operation (acts as Identity on single qubits)"
         }
         return descriptions.get(gate_name, "Unknown gate")
+
+    def simulate_multi_qubit_path(self, start_cities: List[str], target_city: str, 
+                                 initial_state: str, target_state: str,
+                                 player_routes: List[Dict]) -> Tuple[bool, QiskitQuantumState, List[str]]:
+        """
+        Simulate a multi-qubit path where multiple qubits travel through the network.
+        For each step where multiple qubits pass through the same city/route with multiple gates, try all permutations of gate assignments.
+        Mark as success if any permutation leads to the correct quantum state.
+        """
+        import itertools
+        num_qubits = len(start_cities)
+        # For now, only handle the Bell state scenario as a proof of concept
+        # Find all gates in the player_routes
+        gate_options = []
+        for route in player_routes:
+            gates = route['gate'] if isinstance(route['gate'], list) else [route['gate']]
+            gate_options.append(gates)
+        # Generate all possible assignments of gates to qubits (permutations for each route)
+        all_gate_combinations = list(itertools.product(*gate_options))
+        for gate_combo in all_gate_combinations:
+            # Build the gate sequence for this permutation
+            gate_sequence = []
+            for gate in gate_combo:
+                gate_sequence.append(gate)
+            # Simulate the circuit
+            state = QiskitQuantumState(initial_state, num_qubits)
+            for gate in gate_sequence:
+                state.apply_gate(gate)
+            # Check if we reached the target state
+            if state.matches_target(target_state):
+                return True, state, gate_sequence
+        # If none of the permutations worked, return failure
+        return False, QiskitQuantumState(initial_state, num_qubits), []
 
 
 class QuantumGates:

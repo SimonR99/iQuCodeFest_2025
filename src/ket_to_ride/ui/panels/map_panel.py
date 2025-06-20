@@ -72,9 +72,16 @@ class MapPanel(BasePanel):
             # Check if this specific gate is claimable
             claimed_by = route.get('claimed_by', {})
             if isinstance(claimed_by, dict):
-                # New format: check if this specific gate is unclaimed
-                if claimed_by.get(selected_gate) is None:
-                    return f"route_selected:{route_idx}:{selected_gate}:{gate_index}"
+                # New format: check if this specific gate instance is unclaimed
+                gate_claimed_by = claimed_by.get(selected_gate)
+                if isinstance(gate_claimed_by, list):
+                    # Multiple identical gates - check the specific instance
+                    if gate_index < len(gate_claimed_by) and gate_claimed_by[gate_index] is None:
+                        return f"route_selected:{route_idx}:{selected_gate}:{gate_index}"
+                else:
+                    # Single gate instance
+                    if gate_claimed_by is None:
+                        return f"route_selected:{route_idx}:{selected_gate}:{gate_index}"
             else:
                 # Old format: check if route is unclaimed
                 if claimed_by is None:

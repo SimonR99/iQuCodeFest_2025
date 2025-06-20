@@ -105,6 +105,28 @@ class GameState:
         while len(self.mission_deck) < num_missions and attempts < max_attempts:
             attempts += 1
             
+            # Special case: Add a guaranteed Bell state mission if we haven't added one yet
+            if len(self.mission_deck) == 0:
+                # Add the Bell state mission as the first mission
+                bell_start_cities = ["Princeton", "GeorgiaTech"]
+                bell_target = "U Chicago"
+                bell_init_state = "|00⟩"
+                bell_target_state = "|00⟩ + |11⟩"
+                bell_points = 50
+                bell_difficulty = "hard"
+                
+                try:
+                    bell_mission = MissionCard(bell_start_cities, bell_target, bell_init_state, bell_target_state, bell_points, bell_difficulty)
+                    self.mission_deck.append(bell_mission)
+                    used_pairs.add((tuple(sorted(bell_start_cities)), bell_target, 2))
+                    print(f"Generated Bell state mission: {bell_mission}")
+                    print(f"  Bell state circuit: Princeton (H) → Carnegie → U Chicago (CNOT)")
+                    print(f"  GeorgiaTech (I) → Carnegie → U Chicago (CNOT)")
+                    continue
+                except ValueError as e:
+                    print(f"Failed to create Bell state mission: {e}")
+                    continue
+            
             # Choose mission complexity (number of qubits)
             complexity_weights = [0.6, 0.3, 0.1]  # 60% single, 30% double, 10% triple
             num_qubits = random.choices([1, 2, 3], weights=complexity_weights)[0]
@@ -183,11 +205,30 @@ class GameState:
             
             # For multi-start missions, use only the start city that has a working path
             if num_qubits > 1:
-                # Keep original behavior for now but use the validated start city
+                # For multi-qubit missions, we need paths from ALL start cities to the target
+                # This represents routing multiple qubits through the network
+                all_paths_feasible = True
+                total_path_length = 0
+                
+                for start_city in start_cities:
+                    city_paths = [p for p in feasible_paths if p['start_city'] == start_city]
+                    if not city_paths:
+                        all_paths_feasible = False
+                        break
+                    # Use the shortest path for this city
+                    shortest_path = min(city_paths, key=lambda p: len(p['path']))
+                    total_path_length += len(shortest_path['path'])
+                
+                if not all_paths_feasible:
+                    continue  # Skip missions where not all start cities have feasible paths
+                
+                # Use all start cities for multi-qubit missions
                 mission_start_cities = start_cities
+                path_length = total_path_length  # Sum of all paths
             else:
                 # For single qubit missions, use the specific working start city
                 mission_start_cities = [actual_start_city]
+                path_length = len(selected_path['path'])
             
             # Assign points based on difficulty and actual working path length
             difficulty_multiplier = {"easy": 1.0, "medium": 1.5, "hard": 2.0}
@@ -266,7 +307,7 @@ class GameState:
                 
         return drawn_cards
         
-    def can_claim_route(self, player: Player, route_idx: int, selected_gate: str = None) -> bool:
+    def can_claim_route(self, player: Player, route_idx: int, selected_gate: str = None, gate_index: int = None) -> bool:
         if route_idx >= len(self.routes):
             return False
             
@@ -288,14 +329,41 @@ class GameState:
         if selected_gate:
             if selected_gate not in gates:
                 return False
-            if claimed_by.get(selected_gate) is not None:
-                return False
+            
+            # Check if this specific gate instance is available
+            if isinstance(claimed_by, dict):
+                gate_claimed = claimed_by.get(selected_gate)
+                if isinstance(gate_claimed, list):
+                    # Multiple identical gates - check if the specific instance is available
+                    if gate_index is not None and gate_index < len(gate_claimed):
+                        if gate_claimed[gate_index] is not None:
+                            return False
+                    else:
+                        # No specific index provided, check if any instance is available
+                        if all(instance is not None for instance in gate_claimed):
+                            return False
+                else:
+                    # Single gate instance
+                    if gate_claimed is not None:
+                        return False
+            else:
+                # Old format - single claimed_by value
+                if claimed_by is not None:
+                    return False
+            
             gate_type = GateType(selected_gate)
             return player.can_claim_route(gate_type, length)
         
         # Check if player can claim at least one unclaimed gate
         for gate in gates:
-            if claimed_by.get(gate) is None:  # Gate is unclaimed
+            gate_claimed = claimed_by.get(gate)
+            if isinstance(gate_claimed, list):
+                # Multiple identical gates - check if any instance is available
+                if any(instance is None for instance in gate_claimed):
+                    gate_type = GateType(gate)
+                    if player.can_claim_route(gate_type, length):
+                        return True
+            elif gate_claimed is None:  # Gate is unclaimed
                 gate_type = GateType(gate)
                 if player.can_claim_route(gate_type, length):
                     return True
@@ -359,7 +427,18 @@ class GameState:
                 for gate in gates:
                     route['claimed_by'][gate] = None
             
-            route['claimed_by'][selected_gate] = player.player_id
+            # For routes with multiple identical gates, we need to track which specific instance was claimed
+            if gates.count(selected_gate) > 1:
+                # Create a list to track individual gate instances
+                if not isinstance(route['claimed_by'], dict) or not isinstance(route['claimed_by'].get(selected_gate), list):
+                    route['claimed_by'][selected_gate] = [None] * gates.count(selected_gate)
+                
+                # Mark the specific gate instance as claimed
+                route['claimed_by'][selected_gate][gate_index] = player.player_id
+            else:
+                # Single gate, use simple assignment
+                route['claimed_by'][selected_gate] = player.player_id
+            
             # Add route scoring
             self.add_route_scoring(player, length)
             
@@ -378,10 +457,67 @@ class GameState:
             if mission.completed:
                 continue  # Already completed
                 
-            # Check if player has a path from any start city to target
-            for start_city in mission.start_cities:
+            # For multi-qubit missions, we need paths from ALL start cities to target
+            # For single qubit missions, we need a path from the start city to target
+            if len(mission.start_cities) > 1:
+                # Multi-qubit mission: check ALL start cities
+                all_paths_exist = True
+                all_path_routes = []
+                
+                for start_city in mission.start_cities:
+                    path_routes = self.get_path_routes(player, start_city, mission.target_city)
+                    if not path_routes:
+                        all_paths_exist = False
+                        break
+                    all_path_routes.append(path_routes)
+                
+                if not all_paths_exist:
+                    continue  # Not all paths exist yet
+                
+                # Use the new multi-qubit simulator for proper quantum validation
+                print(f"Validating multi-qubit mission: {mission}")
+                print(f"  Start cities: {mission.start_cities}")
+                print(f"  Target city: {mission.target_city}")
+                print(f"  Initial state: {mission.initial_state}")
+                print(f"  Target state: {mission.target_state}")
+                
+                # Get all routes claimed by the player for this mission
+                player_routes_for_mission = []
+                for path_routes in all_path_routes:
+                    for route in path_routes:
+                        if route not in player_routes_for_mission:
+                            player_routes_for_mission.append(route)
+                
+                print(f"  Player routes: {len(player_routes_for_mission)}")
+                
+                # Simulate the multi-qubit quantum circuit
+                success, final_state, gate_sequence = self.quantum_simulator.simulate_multi_qubit_path(
+                    mission.start_cities,
+                    mission.target_city,
+                    mission.initial_state,
+                    mission.target_state,
+                    player_routes_for_mission
+                )
+                
+                print(f"  Quantum simulation result:")
+                print(f"    Success: {success}")
+                print(f"    Gate sequence: {' → '.join(gate_sequence)}")
+                print(f"    Final state: {final_state.get_state_description()}")
+                print(f"    Final probabilities: {final_state.get_probabilities()}")
+                
+                if success:
+                    mission.completed = True
+                    player.score += mission.points
+                    any_completed = True
+                    print(f"🎉 {player.name} completed a multi-qubit mission worth {mission.points} points!")
+                    print(f"  Mission: {mission}")
+                    continue
+                    
+            else:
+                # Single qubit mission: check the one start city
+                start_city = mission.start_cities[0]
                 path_routes = self.get_path_routes(player, start_city, mission.target_city)
-                print(f"Checking mission: {start_city} → {mission.target_city}")
+                print(f"Checking single qubit mission: {start_city} → {mission.target_city}")
                 print(f"  Found path routes: {len(path_routes)}")
                 if path_routes:
                     # Simulate the quantum circuit
@@ -417,7 +553,6 @@ class GameState:
                         player.score += mission.points
                         any_completed = True
                         print(f"🎉 {player.name} completed a mission worth {mission.points} points!")
-                        break  # Break out of start_cities loop for this mission
                         
         # Check if player has completed all their missions (win condition)
         if player.missions and all(mission.completed for mission in player.missions):
@@ -452,7 +587,16 @@ class GameState:
                 player_claimed_gate = None
                 if isinstance(claimed_by, dict):
                     for gate, owner in claimed_by.items():
-                        if owner == player.player_id:
+                        if isinstance(owner, list):
+                            # Multiple identical gates - check if player claimed any instance
+                            for i, instance_owner in enumerate(owner):
+                                if instance_owner == player.player_id:
+                                    player_claimed_gate = gate
+                                    break
+                            if player_claimed_gate:
+                                break
+                        elif owner == player.player_id:
+                            # Single gate instance
                             player_claimed_gate = gate
                             break
                 elif claimed_by == player.player_id:

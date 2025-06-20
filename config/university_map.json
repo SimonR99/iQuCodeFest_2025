@@ -125,14 +125,14 @@
     {
       "from": "Carnegie",
       "to": "Princeton",
-      "gate": ["I","H"],
+      "gate": ["H","I"],
       "length": 2,
       "claimed_by": null
     },
     {
       "from": "Carnegie",
       "to": "GeorgiaTech",
-      "gate": ["H","I"],
+      "gate": ["I","I"],
       "length": 2,
       "claimed_by": null
     },
@@ -190,6 +190,69 @@
       "to": "U Chicago",
       "gate": ["Z","Z"],
       "length": 3,
+      "claimed_by": null
+    },
+    {
+      "from": "Carnegie",
+      "to": "U Chicago",
+      "gate": ["CNOT","CNOT"],
+      "length": 1,
+      "claimed_by": null
+    },
+    {
+      "from": "PolyMTL",
+      "to": "UofT",
+      "gate": ["H", "X"],
+      "length": 2,
+      "claimed_by": null
+    },
+    {
+      "from": "PolyMTL",
+      "to": "U Calgary",
+      "gate": ["Z", "I"],
+      "length": 3,
+      "claimed_by": null
+    },
+    {
+      "from": "Harvard",
+      "to": "Princeton",
+      "gate": ["CNOT", "H"],
+      "length": 2,
+      "claimed_by": null
+    },
+    {
+      "from": "Harvard",
+      "to": "Duke",
+      "gate": ["X", "Z"],
+      "length": 4,
+      "claimed_by": null
+    },
+    {
+      "from": "Duke",
+      "to": "GeorgiaTech",
+      "gate": ["I", "X"],
+      "length": 3,
+      "claimed_by": null
+    },
+    {
+      "from": "UofT",
+      "to": "Harvard",
+      "gate": ["Z", "H"],
+      "length": 4,
+      "claimed_by": null
+    },
+    {
+      "from": "U Atlantis",
+      "to": "Duke",
+      "gate": ["CNOT", "I"],
+      "length": 3,
+      "claimed_by": null
+    },
+    {
+      "from": "U Atlantis",
+      "to": "GeorgiaTech",
+      "gate": ["H", "Z"],
+      "length": 4,
       "claimed_by": null
     }
   ],

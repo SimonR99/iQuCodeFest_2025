@@ -152,7 +152,16 @@ class MapRenderer:
         if claimed_by:
             if isinstance(claimed_by, dict):
                 # New format: check if current gate is claimed
-                actual_claimed_by = claimed_by.get(display_gate)
+                gate_claimed_by = claimed_by.get(display_gate)
+                if isinstance(gate_claimed_by, list):
+                    # Multiple identical gates - need to determine which instance this is
+                    # For parallel routes, we need to know the gate index
+                    gate_index = route_data.get('gate_index', 0)
+                    if gate_index < len(gate_claimed_by):
+                        actual_claimed_by = gate_claimed_by[gate_index]
+                else:
+                    # Single gate or old format
+                    actual_claimed_by = gate_claimed_by
             else:
                 # Old format: route is claimed by this player
                 actual_claimed_by = claimed_by
@@ -282,6 +291,11 @@ class MapRenderer:
                 segment_length = 8
                 segment_spacing = max(1, (route_length - length * segment_length) / max(1, length - 1))
             
+            # If claimed_by is a list, use it to determine which segments are claimed
+            claimed_list = None
+            if isinstance(claimed_by, list):
+                claimed_list = claimed_by
+            
             # Draw a square on each segment center
             for i in range(length):
                 segment_start_x = current_x
@@ -289,32 +303,35 @@ class MapRenderer:
                 segment_end_x = current_x + unit_x * segment_length
                 segment_end_y = current_y + unit_y * segment_length
                 
-                # Draw the square at this segment's center
-                square_center_x = int((segment_start_x + segment_end_x) / 2)
-                square_center_y = int((segment_start_y + segment_end_y) / 2)
+                # Draw the square at this segment's center ONLY if claimed
+                draw_claimed = False
+                if claimed_list is not None:
+                    if i < len(claimed_list) and claimed_list[i]:
+                        draw_claimed = True
+                else:
+                    # Old logic: draw if claimed_by is truthy
+                    draw_claimed = bool(claimed_by)
                 
-                # Square size for gameplay (smaller than debug size)
-                square_size = 12
-                square_rect = pygame.Rect(
-                    square_center_x - square_size // 2,
-                    square_center_y - square_size // 2,
-                    square_size,
-                    square_size
-                )
-                
-                # Draw visible border
-                border_size = 2
-                border_rect = pygame.Rect(
-                    square_center_x - square_size // 2 - border_size,
-                    square_center_y - square_size // 2 - border_size,
-                    square_size + 2 * border_size,
-                    square_size + 2 * border_size
-                )
-                
-                # Use player color with borders for visibility
-                pygame.draw.rect(surface, (255, 255, 255), border_rect)  # White border
-                pygame.draw.rect(surface, player_color, square_rect)      # Player color
-                pygame.draw.rect(surface, (0, 0, 0), square_rect, 1)     # Black inner border
+                if draw_claimed:
+                    square_center_x = int((segment_start_x + segment_end_x) / 2)
+                    square_center_y = int((segment_start_y + segment_end_y) / 2)
+                    square_size = 12
+                    square_rect = pygame.Rect(
+                        square_center_x - square_size // 2,
+                        square_center_y - square_size // 2,
+                        square_size,
+                        square_size
+                    )
+                    border_size = 2
+                    border_rect = pygame.Rect(
+                        square_center_x - square_size // 2 - border_size,
+                        square_center_y - square_size // 2 - border_size,
+                        square_size + 2 * border_size,
+                        square_size + 2 * border_size
+                    )
+                    pygame.draw.rect(surface, (255, 255, 255), border_rect)  # White border
+                    pygame.draw.rect(surface, player_color, square_rect)      # Player color
+                    pygame.draw.rect(surface, (0, 0, 0), square_rect, 1)     # Black inner border
                 
                 # Move to next segment position
                 current_x += unit_x * (segment_length + segment_spacing)
@@ -608,11 +625,21 @@ class MapRenderer:
                         # Create a temporary route dict for each gate
                         temp_route = route.copy()
                         temp_route['gate'] = gate  # Single gate for this path
+                        temp_route['gate_index'] = j  # Add gate index for proper claim status lookup
                         
                         # Check individual gate claim status
                         claimed_by = route.get('claimed_by', {})
                         if isinstance(claimed_by, dict):
-                            temp_route['claimed_by'] = claimed_by.get(gate)
+                            gate_claimed_by = claimed_by.get(gate)
+                            if isinstance(gate_claimed_by, list):
+                                # Multiple identical gates - get the specific instance
+                                if j < len(gate_claimed_by):
+                                    temp_route['claimed_by'] = gate_claimed_by[j]
+                                else:
+                                    temp_route['claimed_by'] = None
+                            else:
+                                # Single gate or old format
+                                temp_route['claimed_by'] = gate_claimed_by
                         else:
                             temp_route['claimed_by'] = claimed_by
                         
