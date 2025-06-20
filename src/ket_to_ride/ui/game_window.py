@@ -531,10 +531,11 @@ class GameWindow:
             if card == "DECK":
                 gate_type = "DECK"
                 text = "DECK"
-                subtext = "Draw 2 random"
+                subtext = ""
             else:
                 gate_type = card
                 text = card.value if hasattr(card, 'value') else str(card)
+                subtext = ""
             
             # Check if card can be drawn
             can_draw = self.cards_drawn_this_turn < self.max_cards_per_turn

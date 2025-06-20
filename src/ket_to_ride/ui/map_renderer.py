@@ -193,6 +193,9 @@ class MapRenderer:
         rail_image = self.rail_images.get(gate)
         if rail_image:
             try:
+                # Make sure image has per-pixel alpha
+                rail_image = rail_image.convert_alpha()
+                
                 # Scale image to fit the train car
                 car_rect = pygame.Rect(
                     min(corner[0] for corner in corners),
@@ -203,7 +206,14 @@ class MapRenderer:
                 
                 # Rotate image to align with route direction
                 angle = math.degrees(math.atan2(dy, dx))
-                rotated_image = pygame.transform.rotate(scaled_image, -angle)
+                
+                # Create a transparent surface for rotation to avoid black background
+                temp_surface = pygame.Surface((car_rect.width * 2, car_rect.height * 2), pygame.SRCALPHA)
+                temp_rect = scaled_image.get_rect(center=temp_surface.get_rect().center)
+                temp_surface.blit(scaled_image, temp_rect)
+                
+                # Rotate with proper alpha handling
+                rotated_image = pygame.transform.rotate(temp_surface, -angle)
                 
                 # Blit the rotated image
                 center_x = (start_pos[0] + end_pos[0]) / 2
@@ -211,7 +221,7 @@ class MapRenderer:
                 image_rect = rotated_image.get_rect(center=(int(center_x), int(center_y)))
                 surface.blit(rotated_image, image_rect)
                 
-                # Draw colored border
+                # Draw colored border around the original train car shape
                 pygame.draw.polygon(surface, color, corners, 2)
             except Exception as e:
                 print(f"Error drawing rail image for {gate}: {e}")
