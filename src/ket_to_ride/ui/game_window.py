@@ -6,56 +6,8 @@ import math
 import time
 from typing import Optional, Tuple, Dict, List
 from .map_renderer import MapRenderer
+from .animation import CardAnimation, AnimationManager
 from ..game import GameState, GateType
-
-class CardAnimation:
-    """Handles card movement animations"""
-    def __init__(self, start_pos: Tuple[int, int], end_pos: Tuple[int, int], 
-                 card_type, duration: float = 0.5, scale_effect: bool = True):
-        self.start_pos = start_pos
-        self.end_pos = end_pos
-        self.card_type = card_type
-        self.duration = duration
-        self.start_time = time.time()
-        self.completed = False
-        self.scale_effect = scale_effect
-        
-    def get_current_pos(self) -> Tuple[int, int]:
-        """Get the current position of the card based on animation progress"""
-        elapsed = time.time() - self.start_time
-        progress = min(elapsed / self.duration, 1.0)
-        
-        # Use smooth easing function
-        ease_progress = 1 - (1 - progress) ** 3  # Ease-out cubic
-        
-        x = self.start_pos[0] + (self.end_pos[0] - self.start_pos[0]) * ease_progress
-        y = self.start_pos[1] + (self.end_pos[1] - self.start_pos[1]) * ease_progress
-        
-        return (int(x), int(y))
-        
-    def get_scale(self) -> float:
-        """Get the current scale factor for the card (1.0 = normal size)"""
-        if not self.scale_effect:
-            return 1.0
-            
-        elapsed = time.time() - self.start_time
-        progress = min(elapsed / self.duration, 1.0)
-        
-        # Scale up to 1.2x at 50% progress, then back to 1.0
-        if progress < 0.5:
-            scale_progress = progress * 2  # 0 to 1
-            return 1.0 + 0.2 * scale_progress
-        else:
-            scale_progress = (progress - 0.5) * 2  # 0 to 1
-            return 1.2 - 0.2 * scale_progress
-        
-    def is_finished(self) -> bool:
-        """Check if animation is complete"""
-        if self.completed:
-            return True
-        if time.time() - self.start_time >= self.duration:
-            self.completed = True
-        return self.completed
 
 class GameWindow:
     def __init__(self, width: int = 1280, height: int = 720):
@@ -72,10 +24,8 @@ class GameWindow:
         self.map_renderer = MapRenderer(config_path)
         self.game_state = GameState(config_path)
         
-        # Animation state
-        self.card_animations: List[CardAnimation] = []
-        self.new_card_animations: List[CardAnimation] = []  # For cards appearing in trade row
-        self.deck_animation_start = None  # Track when deck animation starts
+        # Animation state - now using AnimationManager
+        self.animation_manager = AnimationManager()
         
         # Selected route for highlighting
         self.selected_route_idx = None
@@ -180,32 +130,10 @@ class GameWindow:
     
     def load_colors(self):
         """Load colors from configuration file"""
-        try:
-            config_path = os.path.join(os.path.dirname(__file__), '../../..', 'config', 'colors.json')
-            with open(config_path, 'r') as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"Error loading colors: {e}")
-            # Fallback colors
-            return {
-                'gate_colors': {
-                    'I': {'rgb': [240, 235, 220], 'image_path': None, 'border_color': [240, 235, 220]},
-                    'X': {'rgb': [200, 120, 100], 'image_path': None, 'border_color': [200, 120, 100]},
-                    'Y': {'rgb': [140, 160, 120], 'image_path': None, 'border_color': [140, 160, 120]},
-                    'Z': {'rgb': [120, 140, 160], 'image_path': None, 'border_color': [120, 140, 160]},
-                    'H': {'rgb': [190, 170, 130], 'image_path': None, 'border_color': [190, 170, 130]},
-                    'CNOT': {'rgb': [160, 120, 140], 'image_path': None, 'border_color': [160, 120, 140]}
-                },
-                'ui_colors': {
-                    'background': {'rgb': [45, 52, 48]},
-                    'map_area': {'rgb': [85, 95, 82]},
-                    'card_area': {'rgb': [68, 75, 65]},
-                    'info_panel': {'rgb': [58, 65, 55]},
-                    'border': {'rgb': [120, 110, 95]},
-                    'text': {'rgb': [250, 248, 240]},
-                    'accent': {'rgb': [160, 140, 110]}
-                }
-            }
+        config_path = os.path.join(os.path.dirname(__file__), '../../..', 'config', 'colors.json')
+        with open(config_path, 'r') as f:
+            return json.load(f)
+    
     
     def draw_card_with_image_support(self, surface, card_rect, gate_type, can_draw=True, text="", subtext=""):
         """Draw a card with optional image support and colored border"""
@@ -482,7 +410,7 @@ class GameWindow:
         
         # Create animation
         animation = CardAnimation(start_pos, end_pos, card_type, duration=0.6)
-        self.card_animations.append(animation)
+        self.animation_manager.add_card_animation(animation)
         
         # Store animation data for completion
         animation.card_idx = card_idx
@@ -533,11 +461,11 @@ class GameWindow:
         start_pos = (start_x, start_y)
         
         # Set deck animation start time for visual effect
-        self.deck_animation_start = time.time()
+        self.animation_manager.set_deck_animation_start(time.time())
         
         # Create animation
         animation = CardAnimation(start_pos, end_pos, card_type, duration=0.4)
-        self.new_card_animations.append(animation)
+        self.animation_manager.add_new_card_animation(animation)
             
     def end_turn(self):
         """End the current player's turn"""
@@ -656,7 +584,7 @@ class GameWindow:
         
         for i, card in enumerate(self.available_cards):
             # Skip if card is being animated (moving to hand)
-            if any(anim.card_idx == i for anim in self.card_animations):
+            if self.animation_manager.is_card_being_animated(i):
                 continue
                 
             y = start_y + i * (card_height + card_spacing)
@@ -669,14 +597,14 @@ class GameWindow:
             # Get card info
             if card == "DECK":
                 gate_type = "DECK"
-                text = "DECK"
+                text = ""
                 subtext = ""
                 
                 # Add visual effect if deck is being used
                 can_draw = self.cards_drawn_this_turn < self.max_cards_per_turn
-                if self.deck_animation_start and time.time() - self.deck_animation_start < 0.4:
+                if self.animation_manager.deck_animation_start and time.time() - self.animation_manager.deck_animation_start < 0.4:
                     # Add a pulsing effect to the deck
-                    pulse = abs(math.sin((time.time() - self.deck_animation_start) * 10)) * 0.3 + 0.7
+                    pulse = abs(math.sin((time.time() - self.animation_manager.deck_animation_start) * 10)) * 0.3 + 0.7
                     # Temporarily modify the card color for visual feedback
                     original_color = self.colors['gate_colors']['DECK']['rgb']
                     pulse_color = tuple(int(c * pulse) for c in original_color)
@@ -689,7 +617,7 @@ class GameWindow:
                     self.draw_card_with_image_support(self.screen, card_rect, gate_type, can_draw, text, subtext)
             else:
                 gate_type = card
-                text = card.value if hasattr(card, 'value') else str(card)
+                text = ""
                 subtext = ""
                 
                 # Check if card can be drawn
@@ -814,7 +742,7 @@ class GameWindow:
             "• ESC - Exit",
             "",
         ])
-        
+
         if self.game_state.game_over:
             info_lines.extend([
                 "🎉 GAME OVER! 🎉",
@@ -855,7 +783,7 @@ class GameWindow:
     def draw_animated_cards(self):
         """Draw cards that are currently being animated"""
         # Draw cards moving to hand
-        for animation in self.card_animations:
+        for animation in self.animation_manager.card_animations:
             pos = animation.get_current_pos()
             scale = animation.get_scale()
             
@@ -883,7 +811,7 @@ class GameWindow:
             self.draw_card_with_image_support(self.screen, card_rect, animation.card_type, True, gate_text, "")
             
         # Draw new cards appearing in trade row
-        for animation in self.new_card_animations:
+        for animation in self.animation_manager.new_card_animations:
             pos = animation.get_current_pos()
             scale = animation.get_scale()
             
@@ -934,25 +862,25 @@ class GameWindow:
         """Update and complete animations"""
         # Update card animations (moving to hand)
         completed_animations = []
-        for animation in self.card_animations:
+        for animation in self.animation_manager.card_animations:
             if animation.is_finished():
                 completed_animations.append(animation)
                 self.complete_card_animation(animation)
         
         # Remove completed animations
         for animation in completed_animations:
-            self.card_animations.remove(animation)
+            self.animation_manager.card_animations.remove(animation)
             
         # Update new card animations (appearing in trade row)
         completed_new_animations = []
-        for animation in self.new_card_animations:
+        for animation in self.animation_manager.new_card_animations:
             if animation.is_finished():
                 completed_new_animations.append(animation)
                 
         # Remove completed new card animations and clear deck animation state
         for animation in completed_new_animations:
-            self.new_card_animations.remove(animation)
-            self.deck_animation_start = None  # Clear deck animation state
+            self.animation_manager.new_card_animations.remove(animation)
+            self.animation_manager.clear_deck_animation_start()  # Clear deck animation state
 
 def main():
     game_window = GameWindow()
